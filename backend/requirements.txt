@@ -1,0 +1,26 @@
+# =============================================================================
+# Sentinel Orchestrator Network (SON) - Python Dependencies
+# =============================================================================
+#
+# This file lists all Python dependencies required for the backend orchestrator
+# and agent modules. Install with: pip install -r requirements.txt
+#
+# Categories:
+# - Web Framework: FastAPI, Uvicorn
+# - Agent Framework: CrewAI
+# - Cardano Integration: blockfrost-python
+# - Async & WebSockets: websockets, asyncio support
+# - ML/AI: PyTorch, HuggingFace Transformers (optional)
+# - Utilities: pydantic, python-dotenv
+#
+# =============================================================================
+
+fastapi>=0.100.0
+uvicorn>=0.23.0
+websockets>=11.0
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+blockfrost-python>=0.6.0
+httpx>=0.24.0
+crewai>=0.1.0
+python-multipart>=0.0.6
