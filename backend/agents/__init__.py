@@ -32,10 +32,67 @@ Owner: Member 2 (The Brain)
 =============================================================================
 """
 
-# Agent imports for CrewAI crew definition
-# from .sentinel import SentinelAgent
-# from .oracle import OracleAgent
-# from .compliance import ComplianceAgent
-# from .zk_prover import ZKProverAgent
-# from .consensus import ConsensusAgent
-# from .crew import SONThreatDetectionCrew
+# =============================================================================
+# BASE CLASSES & COMMON TYPES
+# =============================================================================
+
+from .base import (
+    BaseAgent,
+    Vote,
+    Severity,
+)
+
+# =============================================================================
+# AGENT IMPLEMENTATIONS
+# =============================================================================
+
+from .sentinel import SentinelAgent
+from .oracle import OracleAgent, VerificationStatus
+from .compliance import ComplianceAgent, RiskLevel
+from .consensus import ConsensusAgent
+
+# Note: ZK-Prover is not imported here as it's a placeholder
+# from .zk_prover import ZKProverAgent  # TBD
+
+# =============================================================================
+# ORCHESTRATOR
+# =============================================================================
+
+from .crew import (
+    ThreatDetectionCrew,
+    WorkflowResult,
+    WorkflowEvent,
+    WorkflowStatus,
+    AgentStatus,
+    analyze_policy,
+)
+
+# =============================================================================
+# PUBLIC API
+# =============================================================================
+
+__all__ = [
+    # Base classes
+    "BaseAgent",
+    "Vote",
+    "Severity",
+    
+    # Agents
+    "SentinelAgent",
+    "OracleAgent",
+    "ComplianceAgent",
+    "ConsensusAgent",
+    
+    # Enums
+    "VerificationStatus",
+    "RiskLevel",
+    "WorkflowStatus",
+    "AgentStatus",
+    
+    # Orchestrator
+    "ThreatDetectionCrew",
+    "WorkflowResult",
+    "WorkflowEvent",
+    "analyze_policy",
+]
+
