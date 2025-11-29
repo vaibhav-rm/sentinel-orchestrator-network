@@ -24,6 +24,8 @@ export const metadata: Metadata = {
 
 import { Navbar } from "@/components/Navbar";
 import SmoothScroll from "@/components/SmoothScroll";
+import { CustomCursor } from "@/components/CustomCursor";
+import { PageTransition } from "@/components/PageTransition";
 
 export default function RootLayout({
   children,
@@ -36,8 +38,11 @@ export default function RootLayout({
         className={`${orbitron.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} antialiased bg-obsidian-core text-ghost-white`}
       >
         <SmoothScroll>
+          <CustomCursor />
           <Navbar />
-          {children}
+          <PageTransition>
+            {children}
+          </PageTransition>
         </SmoothScroll>
       </body>
     </html>

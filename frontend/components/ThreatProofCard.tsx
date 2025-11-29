@@ -4,7 +4,7 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { Float } from "@react-three/drei";
 import { Card } from "./ui/Card";
 import { Button } from "./ui/Button";
-import { X, Download, Share2, Shield } from "lucide-react";
+import { X, Download, Share2 } from "lucide-react";
 import { Mesh } from "three";
 
 function ShieldModel({ color }: { color: string }) {
