@@ -1,0 +1,25 @@
+{
+    "samples": [
+        {
+            "decommitTxId": "0100000000010100000000000101010100000101000001000001000000000001",
+            "headId": "01010100010000010100000001010001",
+            "tag": "DecommitApproved",
+            "utxoToDecommit": {
+                "0000010001010100000001010000010101000100000000000001010100010100#67": {
+                    "address": "addr_test1yz004k6jqen6ll6puhhu23cz6e7s2n90egzysv8qgp46ajy27p4xl9lshtenntlgwep7mvuajweh6wdslwxrq6kj4r4qwd9uh4",
+                    "datum": null,
+                    "datumhash": "89e3402873ebdc0be16cf5fab189db5c998dfd9daa12b65d98e22e452c703930",
+                    "inlineDatum": null,
+                    "inlineDatumRaw": null,
+                    "referenceScript": null,
+                    "value": {
+                        "8a2f1bdfdd6aafdb8d11e973fac231cd4c2ff3eeddb4e742ff60ead1": {
+                            "05900d5a9d361a0d93b80555bc": 2205090324786957174
+                        }
+                    }
+                }
+            }
+        }
+    ],
+    "seed": 1188646781
+}

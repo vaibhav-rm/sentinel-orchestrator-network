@@ -1,0 +1,13 @@
+/.direnv/
+/.github
+/dist-newstyle/
+*.sock
+*.socket
+*.eventlog
+*.hp
+*.prof
+*.hi
+*.o
+
+demo/
+testnets/

@@ -1,0 +1,417 @@
+cabal-version:      3.0
+name:               hydra-node
+version:            1.2.0
+synopsis:           The Hydra node
+author:             IOG
+copyright:          2022 IOG
+license:            Apache-2.0
+license-files:
+  LICENSE
+  NOTICE
+
+data-files:
+  json-schemas/api.yaml
+  json-schemas/common.yaml
+
+extra-source-files: networks.json
+
+source-repository head
+  type:     git
+  location: https://github.com/cardano-scaling/hydra
+
+common project-config
+  default-language:   GHC2021
+  default-extensions:
+    DataKinds
+    DefaultSignatures
+    DeriveAnyClass
+    DeriveDataTypeable
+    DerivingStrategies
+    DuplicateRecordFields
+    FunctionalDependencies
+    GADTs
+    LambdaCase
+    MultiWayIf
+    NoImplicitPrelude
+    OverloadedStrings
+    PartialTypeSignatures
+    PatternSynonyms
+    TypeFamilies
+    ViewPatterns
+
+  ghc-options:
+    -Wall -Wcompat -Widentities -Wincomplete-record-updates
+    -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
+    -fprint-potential-instances -Wmissing-local-signatures
+
+library
+  import:          project-config
+  hs-source-dirs:  src
+  exposed-modules:
+    Hydra.API.APIServerLog
+    Hydra.API.ClientInput
+    Hydra.API.HTTPServer
+    Hydra.API.Projection
+    Hydra.API.Server
+    Hydra.API.ServerOutput
+    Hydra.API.ServerOutputFilter
+    Hydra.API.WSServer
+    Hydra.Chain
+    Hydra.Chain.Backend
+    Hydra.Chain.Blockfrost
+    Hydra.Chain.Blockfrost.Client
+    Hydra.Chain.Cardano
+    Hydra.Chain.CardanoClient
+    Hydra.Chain.Direct
+    Hydra.Chain.Direct.Handlers
+    Hydra.Chain.Direct.State
+    Hydra.Chain.Direct.TimeHandle
+    Hydra.Chain.Direct.Wallet
+    Hydra.Chain.Offline
+    Hydra.Chain.ScriptRegistry
+    Hydra.Events
+    Hydra.Events.FileBased
+    Hydra.Events.Rotation
+    Hydra.HeadLogic
+    Hydra.HeadLogic.Error
+    Hydra.HeadLogic.Input
+    Hydra.HeadLogic.Outcome
+    Hydra.HeadLogic.State
+    Hydra.HeadLogic.StateEvent
+    Hydra.Ledger
+    Hydra.Ledger.Cardano
+    Hydra.Ledger.Simple
+    Hydra.Logging
+    Hydra.Logging.Messages
+    Hydra.Logging.Monitoring
+    Hydra.Network
+    Hydra.Network.Authenticate
+    Hydra.Network.Etcd
+    Hydra.Network.EtcdBinary
+    Hydra.Network.Message
+    Hydra.NetworkVersions
+    Hydra.Node
+    Hydra.Node.ApiTransactionTimeout
+    Hydra.Node.DepositPeriod
+    Hydra.Node.EmbedTH
+    Hydra.Node.Environment
+    Hydra.Node.InputQueue
+    Hydra.Node.Network
+    Hydra.Node.ParameterMismatch
+    Hydra.Node.Run
+    Hydra.Node.State
+    Hydra.Node.Util
+    Hydra.Options
+    Hydra.Persistence
+    Hydra.PersistenceLog
+    Hydra.Utils
+
+  other-modules:   Paths_hydra_node
+  build-depends:
+    , aeson
+    , base
+    , base16-bytestring
+    , blockfrost-client               >=0.9.2.0
+    , bytestring
+    , cardano-api
+    , cardano-binary
+    , cardano-crypto-class
+    , cardano-crypto-wrapper
+    , cardano-ledger-alonzo
+    , cardano-ledger-api
+    , cardano-ledger-babbage
+    , cardano-ledger-babbage:testlib
+    , cardano-ledger-binary
+    , cardano-ledger-byron
+    , cardano-ledger-conway
+    , cardano-ledger-conway:testlib
+    , cardano-ledger-core
+    , cardano-ledger-core:testlib
+    , cardano-ledger-shelley
+    , cardano-slotting
+    , cardano-strict-containers
+    , conduit
+    , containers
+    , contra-tracer
+    , crypton
+    , data-default
+    , directory
+    , file-embed
+    , filepath
+    , grapesy
+    , grapesy-etcd                    >=0.3
+    , http-types
+    , hydra-cardano-api
+    , hydra-plutus
+    , hydra-prelude
+    , hydra-tx
+    , hydra-tx:testlib
+    , io-classes                      >=0.3.0.0
+    , iohk-monitoring
+    , iproute
+    , lens
+    , lens-aeson
+    , modern-uri
+    , network
+    , optparse-applicative
+    , ouroboros-consensus
+    , ouroboros-network-api           >=0.7.1
+    , ouroboros-network-protocols     >=0.8
+    , process
+    , prometheus
+    , QuickCheck
+    , quickcheck-arbitrary-adt
+    , quickcheck-instances
+    , resourcet
+    , retry
+    , safe-money
+    , serialise
+    , sop-extras
+    , stm
+    , template-haskell
+    , text
+    , time
+    , transformers
+    , typed-process
+    , unix
+    , unliftio
+    , wai
+    , wai-cors
+    , wai-websockets
+    , warp
+    , warp-tls
+    , websockets
+
+  ghc-options:     -haddock
+
+library testlib
+  import:          project-config
+  visibility:      public
+  hs-source-dirs:  testlib
+  exposed-modules:
+    Hydra.JSONSchema
+    Test.Hydra.Node.Fixture
+
+  other-modules:   Paths_hydra_node
+  build-depends:
+    , aeson
+    , base
+    , cardano-ledger-core
+    , containers
+    , directory
+    , filepath
+    , hydra-cardano-api
+    , hydra-node
+    , hydra-prelude
+    , hydra-test-utils
+    , hydra-tx:testlib
+    , lens
+    , lens-aeson
+    , process
+    , QuickCheck
+    , text
+    , time
+    , versions
+    , yaml
+
+library examples
+  import:          project-config
+  visibility:      public
+  hs-source-dirs:  examples
+  exposed-modules:
+    Hydra.Events.S3
+    Hydra.Events.UDP
+
+  build-depends:
+    , aeson
+    , amazonka
+    , amazonka-s3
+    , base
+    , conduit
+    , hydra-node
+    , hydra-prelude
+    , lens
+    , network
+    , network-udp
+    , resourcet
+
+executable hydra-node
+  import:         project-config
+  hs-source-dirs: exe/hydra-node
+  main-is:        Main.hs
+  build-depends:
+    , base
+    , bytestring
+    , hydra-cardano-api
+    , hydra-node
+    , hydra-prelude
+    , unix
+
+  ghc-options:    -threaded -rtsopts -with-rtsopts=-N4
+
+benchmark tx-cost
+  import:         project-config
+  hs-source-dirs: bench/tx-cost
+  main-is:        Main.hs
+  other-modules:  TxCost
+  type:           exitcode-stdio-1.0
+  build-depends:
+    , base
+    , bytestring
+    , cardano-api
+    , cardano-binary
+    , directory
+    , filepath
+    , hydra-cardano-api
+    , hydra-node
+    , hydra-plutus
+    , hydra-plutus-extras
+    , hydra-prelude
+    , hydra-tx
+    , hydra-tx:testlib
+    , optparse-applicative
+    , plutus-ledger-api
+    , plutus-tx
+    , QuickCheck
+
+  ghc-options:    -threaded -rtsopts
+
+benchmark micro
+  import:         project-config
+  hs-source-dirs: bench/micro-bench
+  main-is:        Main.hs
+  type:           exitcode-stdio-1.0
+  build-depends:
+    , aeson
+    , base
+    , criterion
+    , hydra-cardano-api
+    , hydra-node
+    , hydra-node:testlib
+    , hydra-prelude
+    , hydra-tx
+    , QuickCheck
+
+  ghc-options:    -threaded -rtsopts -with-rtsopts=-N4
+
+test-suite tests
+  import:             project-config
+  ghc-options:        -threaded -rtsopts -with-rtsopts=-N
+  hs-source-dirs:     test
+  other-modules:
+    Hydra.AccumulatorSpec
+    Hydra.API.ClientInputSpec
+    Hydra.API.HTTPServerSpec
+    Hydra.API.ServerOutputSpec
+    Hydra.API.ServerSpec
+    Hydra.BehaviorSpec
+    Hydra.Chain.Direct.HandlersSpec
+    Hydra.Chain.Direct.ScriptRegistrySpec
+    Hydra.Chain.Direct.StateSpec
+    Hydra.Chain.Direct.TimeHandleSpec
+    Hydra.Chain.Direct.TxSpec
+    Hydra.Chain.Direct.TxTraceSpec
+    Hydra.Chain.Direct.WalletSpec
+    Hydra.Chain.ScriptRegistrySpec
+    Hydra.CryptoSpec
+    Hydra.Events.FileBasedSpec
+    Hydra.Events.RotationSpec
+    Hydra.Events.S3Spec
+    Hydra.Events.UDPSpec
+    Hydra.HeadLogicSnapshotSpec
+    Hydra.HeadLogicSpec
+    Hydra.JSONSchemaSpec
+    Hydra.Ledger.Cardano.TimeSpec
+    Hydra.Ledger.CardanoSpec
+    Hydra.Ledger.SimpleSpec
+    Hydra.Logging.MonitoringSpec
+    Hydra.LoggingSpec
+    Hydra.Model
+    Hydra.Model.MockChain
+    Hydra.Model.MockChainSpec
+    Hydra.Model.Payment
+    Hydra.ModelSpec
+    Hydra.Network.AuthenticateSpec
+    Hydra.NetworkSpec
+    Hydra.NetworkVersionsSpec
+    Hydra.Node.InputQueueSpec
+    Hydra.Node.RunSpec
+    Hydra.NodeSpec
+    Hydra.OptionsSpec
+    Hydra.PartySpec
+    Hydra.PersistenceSpec
+    Hydra.PersistentQueueSpec
+    Hydra.UtilsSpec
+    Paths_hydra_node
+    Spec
+    Test.Util
+
+  main-is:            Main.hs
+  type:               exitcode-stdio-1.0
+  build-depends:
+    , aeson
+    , amazonka
+    , amazonka-s3
+    , base
+    , bytestring
+    , cardano-api
+    , cardano-api:gen
+    , cardano-binary
+    , cardano-crypto-class
+    , cardano-ledger-alonzo
+    , cardano-ledger-api
+    , cardano-ledger-babbage
+    , cardano-ledger-babbage:testlib
+    , cardano-ledger-conway
+    , cardano-ledger-core
+    , cardano-ledger-shelley
+    , cardano-ledger-shelley:testlib
+    , cardano-slotting
+    , cardano-strict-containers
+    , cborg
+    , conduit
+    , containers
+    , contra-tracer
+    , directory
+    , filepath
+    , generic-lens
+    , haskell-accumulator
+    , hedgehog-quickcheck
+    , hspec
+    , hspec-golden-aeson
+    , hspec-wai
+    , HUnit
+    , hydra-cardano-api
+    , hydra-node
+    , hydra-node:examples
+    , hydra-node:testlib
+    , hydra-plutus
+    , hydra-prelude
+    , hydra-test-utils
+    , hydra-tx
+    , hydra-tx:testlib
+    , io-classes
+    , io-sim
+    , lens
+    , lens-aeson
+    , network-simple-wss
+    , network-udp
+    , plutus-ledger-api               >=1.1.1.0
+    , plutus-tx
+    , QuickCheck
+    , quickcheck-dynamic              >=3.4     && <3.5
+    , quickcheck-instances
+    , regex-tdfa
+    , req
+    , resourcet
+    , silently
+    , stm
+    , temporary
+    , text
+    , time
+    , tls
+    , typed-process
+    , websockets
+
+  build-tool-depends: hspec-discover:hspec-discover
+  ghc-options:        -threaded -rtsopts

@@ -1,0 +1,35 @@
+{
+    "samples": [
+        {
+            "snapshot": {
+                "headId": "00000001010101000000000000010100",
+                "initialUTxO": {
+                    "0100010000010100000101010001000100010001000100010000000101000000#35": {
+                        "address": "addr_test1vrpy9sm0frzc7etxckrrg0v8su7wqfzwvpz757m860yv39s34s6qh",
+                        "datum": null,
+                        "datumhash": null,
+                        "inlineDatum": null,
+                        "inlineDatumRaw": null,
+                        "referenceScript": {
+                            "script": {
+                                "cborHex": "83030080",
+                                "description": "",
+                                "type": "SimpleScript"
+                            },
+                            "scriptLanguage": "SimpleScriptLanguage"
+                        },
+                        "value": {
+                            "5c69113c77be6cec56dbfc61d31df95264a9952a0ed36284e2cdd696": {
+                                "32": 1
+                            },
+                            "lovelace": 1139531366464006203
+                        }
+                    }
+                },
+                "tag": "InitialSnapshot"
+            },
+            "tag": "SideLoadSnapshot"
+        }
+    ],
+    "seed": 1614547275
+}

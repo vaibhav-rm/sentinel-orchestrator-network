@@ -1,0 +1,10 @@
+{
+    "samples": [
+        {
+            "distributedUTxO": {},
+            "headId": "01000101010100010100000001010100",
+            "tag": "DecommitFinalized"
+        }
+    ],
+    "seed": -1322055816
+}

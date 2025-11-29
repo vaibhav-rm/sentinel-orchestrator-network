@@ -1,0 +1,95 @@
+cabal-version: 3.0
+name:          hydra-cardano-api
+version:       1.2.0
+synopsis:      A Haskell API for Cardano, tailored to the Hydra project.
+author:        IOG
+copyright:     2022 IOG
+license:       Apache-2.0
+license-files:
+  LICENSE
+  NOTICE
+
+source-repository head
+  type:     git
+  location: https://github.com/cardano-scaling/hydra
+
+common project-config
+  default-language:   GHC2021
+  default-extensions:
+    DataKinds
+    DefaultSignatures
+    DeriveAnyClass
+    DerivingStrategies
+    FunctionalDependencies
+    GADTs
+    LambdaCase
+    MultiWayIf
+    OverloadedStrings
+    PartialTypeSignatures
+    PatternSynonyms
+    TypeFamilies
+    ViewPatterns
+
+  ghc-options:
+    -Wall -Wcompat -Widentities -Wincomplete-record-updates
+    -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
+    -fprint-potential-instances -Wmissing-local-signatures
+
+library
+  import:          project-config
+  hs-source-dirs:  src
+  ghc-options:     -haddock
+  exposed-modules:
+    Hydra.Cardano.Api
+    Hydra.Cardano.Api.Address
+    Hydra.Cardano.Api.AddressInEra
+    Hydra.Cardano.Api.ChainPoint
+    Hydra.Cardano.Api.ExecutionUnits
+    Hydra.Cardano.Api.Hash
+    Hydra.Cardano.Api.NetworkId
+    Hydra.Cardano.Api.NetworkMagic
+    Hydra.Cardano.Api.PolicyAssets
+    Hydra.Cardano.Api.PolicyId
+    Hydra.Cardano.Api.Prelude
+    Hydra.Cardano.Api.Pretty
+    Hydra.Cardano.Api.ReferenceScript
+    Hydra.Cardano.Api.ScriptData
+    Hydra.Cardano.Api.ScriptDatum
+    Hydra.Cardano.Api.ScriptHash
+    Hydra.Cardano.Api.StakeAddress
+    Hydra.Cardano.Api.Tx
+    Hydra.Cardano.Api.TxBody
+    Hydra.Cardano.Api.TxId
+    Hydra.Cardano.Api.TxIn
+    Hydra.Cardano.Api.TxOut
+    Hydra.Cardano.Api.TxOutDatum
+    Hydra.Cardano.Api.TxOutValue
+    Hydra.Cardano.Api.UTxO
+    Hydra.Cardano.Api.ValidityInterval
+    Hydra.Cardano.Api.Value
+    Hydra.Cardano.Api.Witness
+
+  -- NOTE: We only use an upper bound on cardano-api and have the other
+  -- dependencies on cardano-ledger* and plutus-ledger-api follow.
+  build-depends:
+    , aeson                   >=2
+    , base                    >=4.14
+    , bytestring
+    , cardano-api             ^>=10.17
+    , cardano-api:gen
+    , cardano-binary
+    , cardano-crypto-class
+    , cardano-ledger-allegra
+    , cardano-ledger-alonzo
+    , cardano-ledger-api
+    , cardano-ledger-babbage
+    , cardano-ledger-binary
+    , cardano-ledger-core
+    , cardano-ledger-mary
+    , cardano-ledger-shelley
+    , containers
+    , hedgehog-quickcheck
+    , lens
+    , plutus-ledger-api
+    , QuickCheck
+    , text                    >=2

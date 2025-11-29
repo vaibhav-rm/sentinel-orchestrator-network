@@ -1,0 +1,79 @@
+name: "Smoke test"
+on:
+  workflow_dispatch:
+    inputs:
+      network:
+        description: "Cardano network to run against"
+        required: true
+        default: "preview"
+        type: choice
+        options:
+        - preview
+        - preprod
+        - mainnet
+        - sanchonet
+        - blockfrost-preview
+
+
+      hydra-scripts-tx-id:
+        description: "TxId of already published scripts (leave empty to publish)"
+        required: false
+
+      use-mithril:
+        description: "Bootstrap cardano-node using mithril (removes existing db/)"
+        required: false
+        type: boolean
+
+jobs:
+  smoke-test:
+    name: "Smoke test on ${{inputs.network}}"
+    runs-on: [self-hosted, cardano]
+    concurrency: cardano-${{inputs.network}}
+    env:
+      state_dir: /data/cardano/${{inputs.network}}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: ❄ Setup Nix/Cachix
+      uses: cachix/install-nix-action@v31
+      with:
+        extra_nix_config: |
+          accept-flake-config = true
+
+    - name: 🧹 Cleanup hydra-node state
+      run: |
+        rm -rf ${state_dir}/state-*
+
+    - name: 🤐 Setup secret faucet key
+      if: ${{ inputs.network == 'mainnet' }}
+      run: |
+        echo "${{secrets.faucet_sk}}" | base64 -d >hydra-cluster/config/credentials/faucet.sk
+        echo "${{secrets.faucet_vk}}" | base64 -d >hydra-cluster/config/credentials/faucet.vk
+
+    - name: 🚬 Run hydra-cluster smoke test
+      run: |
+        if [ -n "${{inputs.hydra-scripts-tx-id}}" ]; then
+          HYDRA_SCRIPTS_ARG="--hydra-scripts-tx-id ${{inputs.hydra-scripts-tx-id}}"
+        else
+          HYDRA_SCRIPTS_ARG="--publish-hydra-scripts"
+        fi
+        if ${{inputs.use-mithril}}; then
+          USE_MITHRIL_ARG="--use-mithril"
+        fi
+
+        if [[ ${{secrets.blockfrost_token}} != '' ]]; then
+          echo "${{secrets.blockfrost_token}}" > blockfrost-project.txt
+        else
+          echo "::warning file=blockfrost-project.txt,title=BLOCKFROST::Missing blockfrost project file."
+        fi
+        nix develop .#exes --command bash -c "hydra-cluster --${{inputs.network}} --state-directory ${state_dir} ${HYDRA_SCRIPTS_ARG} ${USE_MITHRIL_ARG}"
+
+    - name: 💾 Upload logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: hydra-cluster-logs
+        path: ${state_dir}/logs/**/*
+        if-no-files-found: ignore

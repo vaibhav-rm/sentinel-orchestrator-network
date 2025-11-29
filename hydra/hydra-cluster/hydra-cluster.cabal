@@ -1,0 +1,239 @@
+cabal-version:      3.0
+name:               hydra-cluster
+version:            1.2.0
+synopsis:
+  Integration test suite using a local cluster of cardano and hydra nodes
+
+author:             IOG
+copyright:          2022 IOG
+license:            Apache-2.0
+license-files:
+  LICENSE
+  NOTICE
+
+extra-source-files: README.md
+data-files:
+  config/credentials/alice-funds.sk
+  config/credentials/alice-funds.vk
+  config/credentials/alice.sk
+  config/credentials/alice.vk
+  config/credentials/bob-funds.sk
+  config/credentials/bob-funds.vk
+  config/credentials/bob.sk
+  config/credentials/bob.vk
+  config/credentials/carol-funds.sk
+  config/credentials/carol-funds.vk
+  config/credentials/carol.sk
+  config/credentials/carol.vk
+  config/credentials/faucet.sk
+  config/credentials/faucet.vk
+  config/devnet/byron-delegate.key
+  config/devnet/byron-delegation.cert
+  config/devnet/cardano-node.json
+  config/devnet/genesis-alonzo.json
+  config/devnet/genesis-byron.json
+  config/devnet/genesis-conway.json
+  config/devnet/genesis-shelley.json
+  config/devnet/kes.skey
+  config/devnet/opcert.cert
+  config/devnet/vrf.skey
+  config/protocol-parameters.json
+
+source-repository head
+  type:     git
+  location: https://github.com/cardano-scaling/hydra
+
+common project-config
+  default-language:   GHC2021
+  default-extensions:
+    DataKinds
+    DefaultSignatures
+    DeriveAnyClass
+    DerivingStrategies
+    FunctionalDependencies
+    GADTs
+    LambdaCase
+    MultiWayIf
+    NoImplicitPrelude
+    OverloadedStrings
+    PartialTypeSignatures
+    PatternSynonyms
+    TypeFamilies
+    ViewPatterns
+
+  ghc-options:
+    -Wall -Wcompat -Widentities -Wincomplete-record-updates
+    -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
+    -fprint-potential-instances -Wmissing-local-signatures
+
+library
+  import:          project-config
+  hs-source-dirs:  src
+  exposed-modules:
+    CardanoClient
+    CardanoNode
+    Hydra.Cluster.Faucet
+    Hydra.Cluster.Fixture
+    Hydra.Cluster.Mithril
+    Hydra.Cluster.Options
+    Hydra.Cluster.Scenarios
+    Hydra.Cluster.Util
+    Hydra.Generator
+    HydraNode
+    Paths_hydra_cluster
+
+  build-depends:
+    , aeson
+    , async
+    , base                   >=4.7 && <5
+    , bytestring
+    , cardano-api
+    , cardano-ledger-alonzo
+    , cardano-ledger-api
+    , cardano-ledger-core
+    , cardano-slotting
+    , containers
+    , contra-tracer
+    , directory
+    , filepath
+    , http-conduit
+    , http-types
+    , hydra-cardano-api
+    , hydra-node
+    , hydra-plutus
+    , hydra-prelude
+    , hydra-test-utils
+    , hydra-tx
+    , hydra-tx:testlib
+    , io-classes
+    , lens
+    , lens-aeson
+    , optparse-applicative
+    , process
+    , QuickCheck
+    , req
+    , text
+    , time
+    , typed-process
+    , unix
+    , websockets
+
+  ghc-options:     -haddock
+
+executable hydra-cluster
+  import:             project-config
+  hs-source-dirs:     exe/hydra-cluster
+  main-is:            Main.hs
+  ghc-options:        -threaded -rtsopts
+  build-depends:
+    , directory
+    , filepath
+    , hydra-cardano-api
+    , hydra-cluster
+    , hydra-node
+    , hydra-prelude
+    , hydra-test-utils
+    , optparse-applicative
+
+  build-tool-depends: hydra-node:hydra-node
+  ghc-options:        -threaded -rtsopts
+
+test-suite tests
+  import:             project-config
+  hs-source-dirs:     test
+  main-is:            Main.hs
+  type:               exitcode-stdio-1.0
+  other-modules:
+    Paths_hydra_cluster
+    Spec
+    Test.BlockfrostChainSpec
+    Test.CardanoClientSpec
+    Test.CardanoNodeSpec
+    Test.ChainObserverSpec
+    Test.DirectChainSpec
+    Test.EndToEndSpec
+    Test.GeneratorSpec
+    Test.Hydra.Cluster.CardanoCliSpec
+    Test.Hydra.Cluster.FaucetSpec
+    Test.Hydra.Cluster.HydraClientSpec
+    Test.Hydra.Cluster.MithrilSpec
+    Test.Hydra.Cluster.Utils
+    Test.OfflineChainSpec
+
+  build-depends:
+    , aeson
+    , async
+    , base                >=4.7 && <5
+    , bytestring
+    , cardano-api
+    , cardano-ledger-api
+    , containers
+    , directory
+    , filepath
+    , hspec
+    , hspec-golden-aeson
+    , http-conduit
+    , hydra-cardano-api
+    , hydra-cluster
+    , hydra-node
+    , hydra-node:testlib
+    , hydra-prelude
+    , hydra-test-utils
+    , hydra-tx
+    , hydra-tx:testlib
+    , io-classes
+    , lens
+    , lens-aeson
+    , process
+    , QuickCheck
+    , split
+    , stm
+    , text
+    , time
+
+  build-tool-depends:
+    , hspec-discover:hspec-discover
+    , hydra-chain-observer:hydra-chain-observer
+    , hydra-node:hydra-node
+
+  ghc-options:        -threaded -rtsopts
+
+benchmark bench-e2e
+  import:             project-config
+  hs-source-dirs:     bench
+  main-is:            Main.hs
+  type:               exitcode-stdio-1.0
+  other-modules:
+    Bench.EndToEnd
+    Bench.Options
+    Bench.Summary
+
+  build-depends:
+    , aeson
+    , base                  >=4.7 && <5
+    , bytestring
+    , containers
+    , directory
+    , filepath
+    , HUnit
+    , hydra-cardano-api
+    , hydra-cluster
+    , hydra-node
+    , hydra-prelude
+    , hydra-test-utils
+    , hydra-tx
+    , io-classes
+    , lens
+    , lens-aeson
+    , optparse-applicative
+    , process
+    , QuickCheck
+    , regex-tdfa
+    , scientific
+    , statistics
+    , text
+    , time
+    , vector
+
+  build-tool-depends: hydra-node:hydra-node
+  ghc-options:        -threaded -rtsopts

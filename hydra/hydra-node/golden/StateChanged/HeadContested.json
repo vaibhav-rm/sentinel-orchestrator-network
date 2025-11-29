@@ -1,0 +1,37 @@
+{
+    "samples": [
+        {
+            "chainState": {
+                "recordedAt": null,
+                "spendableUTxO": {
+                    "0000000100010000010100010100010001010101000000010001000001000101#13": {
+                        "address": "addr_test1xrcpyjw5jkvr8js8pkwx3lwrxsmdvxyzclucrcnyrckds8fqge46rcj0wd7lu6qhrzxepd97grau4daw7sl8gdskvrjs3n69pd",
+                        "datum": null,
+                        "datumhash": null,
+                        "inlineDatum": null,
+                        "inlineDatumRaw": null,
+                        "referenceScript": {
+                            "script": {
+                                "cborHex": "820503",
+                                "description": "",
+                                "type": "SimpleScript"
+                            },
+                            "scriptLanguage": "SimpleScriptLanguage"
+                        },
+                        "value": {
+                            "8f461954fe2f18fee1dca233f358907e643ff839ed1f995e4bf325e3": {
+                                "dd475073": 1
+                            },
+                            "lovelace": 4772342029819399506
+                        }
+                    }
+                }
+            },
+            "contestationDeadline": "1864-05-08T06:55:03.192640857607Z",
+            "headId": "00010100010100000000000000000100",
+            "snapshotNumber": 1,
+            "tag": "HeadContested"
+        }
+    ],
+    "seed": -459270901
+}

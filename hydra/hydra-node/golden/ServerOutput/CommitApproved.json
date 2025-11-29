@@ -1,0 +1,31 @@
+{
+    "samples": [
+        {
+            "headId": "00010001000000000001010101000101",
+            "tag": "CommitApproved",
+            "utxoToCommit": {
+                "0101010001010100010000010001010101010100000100000100000100010101#86": {
+                    "address": "Ae2tdPwUPEZBJkEbCd6gLr5Z26E98jx8YUpDZ1bsNL6MBmV4azk8r6Mn8Gv",
+                    "datum": null,
+                    "datumhash": null,
+                    "inlineDatum": null,
+                    "inlineDatumRaw": null,
+                    "referenceScript": {
+                        "script": {
+                            "cborHex": "8202818201848202848200581cd953be1df3576ce45a2f2e435b48f2bbc2bb412a3cf93b4d9a8523f48200581cdbcd389a982d698d83226554639bff88fec29fa1c3e8949182e590fd8200581ccef11df30d9e337c0407f1441375546e7d6125031a6c2193f6edbc5d8200581cf7d331ea4d6f66522371144710cc0519203c67e30ca87e2f48a008c6820180830302848200581c7d88de5417c6f61440240ade2c60e7e4a3e85e7ecfd3db71ec3544dc8200581c9b3eff5558761b83a18e35c941cb607bc8923431908d6a26a3cdd3e88200581c5ce1883287d6c789013ad4c457148e8eb1cec2213b1257d65064b72b8200581cdb0e60a556e578376a936607a7bbf4259a46ac9c9767ea480a0d59208200581c138540db9b52f64903c093bede1d79c52d4345c001bdeed8ad8dac63",
+                            "description": "",
+                            "type": "SimpleScript"
+                        },
+                        "scriptLanguage": "SimpleScriptLanguage"
+                    },
+                    "value": {
+                        "2d725128406dc832eb74c4709aca0512499b3c7b17e00d7cb2e6d1b1": {
+                            "36": 1
+                        }
+                    }
+                }
+            }
+        }
+    ],
+    "seed": 118089542
+}

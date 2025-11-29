@@ -1,0 +1,12 @@
+{
+    "samples": [
+        {
+            "peer": {
+                "hostname": "0.0.122.110",
+                "port": 1964
+            },
+            "tag": "PeerConnected"
+        }
+    ],
+    "seed": 1214056638
+}

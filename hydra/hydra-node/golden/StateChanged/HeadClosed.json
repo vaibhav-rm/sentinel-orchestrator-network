@@ -1,0 +1,42 @@
+{
+    "samples": [
+        {
+            "chainState": {
+                "recordedAt": {
+                    "blockHash": "0100000100000101000100000001000100010001000000010100010100010000",
+                    "slot": 1,
+                    "tag": "ChainPoint"
+                },
+                "spendableUTxO": {
+                    "0101000001010000010000000101000000010001000101000101000101010100#52": {
+                        "address": "addr_test1xrx23kf3fc77cv8z7eaezshe6mem8u8fqlfgymzzew3hsp078cp6ykukj9x2ajszjcd9n78etssshmmew075cdfy0vwq9xcjka",
+                        "datum": null,
+                        "inlineDatum": {
+                            "int": 1
+                        },
+                        "inlineDatumRaw": "01",
+                        "inlineDatumhash": "ee155ace9c40292074cb6aff8c9ccdd273c81648ff1149ef36bcea6ebb8a3e25",
+                        "referenceScript": {
+                            "script": {
+                                "cborHex": "820401",
+                                "description": "",
+                                "type": "SimpleScript"
+                            },
+                            "scriptLanguage": "SimpleScriptLanguage"
+                        },
+                        "value": {
+                            "4a1c412d8e2b3015a7fb7d382808fb7cb721bf93a56e8bb6661cdebe": {
+                                "dc2d92b068fe0dd1838d104d70dd557c0b1522": 1
+                            }
+                        }
+                    }
+                }
+            },
+            "contestationDeadline": "1864-05-09T16:14:55.682122322999Z",
+            "headId": "01000100010001000101000101010001",
+            "snapshotNumber": 0,
+            "tag": "HeadClosed"
+        }
+    ],
+    "seed": -1185382992
+}

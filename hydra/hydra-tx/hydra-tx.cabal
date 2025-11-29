@@ -1,0 +1,230 @@
+cabal-version: 3.0
+name:          hydra-tx
+version:       1.2.0
+synopsis:      Hydra transaction library
+author:        IOG
+copyright:     2024 IOG
+license:       Apache-2.0
+license-files:
+  LICENSE
+  NOTICE
+
+source-repository head
+  type:     git
+  location: https://github.com/cardano-scaling/hydra
+
+common project-config
+  default-language:   GHC2021
+  default-extensions:
+    DataKinds
+    DefaultSignatures
+    DeriveAnyClass
+    DeriveDataTypeable
+    DerivingStrategies
+    DuplicateRecordFields
+    FunctionalDependencies
+    GADTs
+    LambdaCase
+    MultiWayIf
+    NoImplicitPrelude
+    OverloadedStrings
+    PartialTypeSignatures
+    PatternSynonyms
+    TypeFamilies
+    ViewPatterns
+
+  ghc-options:
+    -Wall -Wcompat -Widentities -Wincomplete-record-updates
+    -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
+    -fprint-potential-instances -Wmissing-local-signatures
+
+library
+  import:          project-config
+  hs-source-dirs:  src
+  exposed-modules:
+    Hydra.Chain.ChainState
+    Hydra.Ledger.Cardano.Builder
+    Hydra.Ledger.Cardano.Evaluate
+    Hydra.Ledger.Cardano.Time
+    Hydra.Tx
+    Hydra.Tx.Abort
+    Hydra.Tx.BlueprintTx
+    Hydra.Tx.Close
+    Hydra.Tx.CollectCom
+    Hydra.Tx.Commit
+    Hydra.Tx.Contest
+    Hydra.Tx.ContestationPeriod
+    Hydra.Tx.Crypto
+    Hydra.Tx.Decrement
+    Hydra.Tx.Deposit
+    Hydra.Tx.Fanout
+    Hydra.Tx.HeadId
+    Hydra.Tx.HeadParameters
+    Hydra.Tx.Increment
+    Hydra.Tx.Init
+    Hydra.Tx.IsTx
+    Hydra.Tx.Observe
+    Hydra.Tx.OnChainId
+    Hydra.Tx.Party
+    Hydra.Tx.Recover
+    Hydra.Tx.ScriptRegistry
+    Hydra.Tx.Snapshot
+    Hydra.Tx.Utils
+
+  other-modules:   Paths_hydra_tx
+  build-depends:
+    , aeson
+    , base
+    , base16-bytestring
+    , bytestring
+    , cardano-api
+    , cardano-crypto-class
+    , cardano-ledger-alonzo
+    , cardano-ledger-api
+    , cardano-ledger-binary
+    , cardano-ledger-core
+    , cardano-ledger-shelley
+    , cardano-slotting
+    , cardano-strict-containers
+    , cborg
+    , containers
+    , data-default
+    , formatting
+    , hydra-cardano-api
+    , hydra-plutus
+    , hydra-plutus-extras
+    , hydra-prelude
+    , lens
+    , lens-aeson
+    , mono-traversable
+    , ouroboros-consensus
+    , ouroboros-consensus-cardano
+    , plutus-ledger-api
+    , prettyprinter
+    , QuickCheck
+    , quickcheck-instances
+    , serialise
+    , sop-extras
+    , text
+    , time
+
+  ghc-options:     -haddock
+
+library testlib
+  import:          project-config
+  hs-source-dirs:  testlib
+  visibility:      public
+  exposed-modules:
+    Test.Hydra.Tx.Fixture
+    Test.Hydra.Tx.Gen
+    Test.Hydra.Tx.Mutation
+
+  other-modules:   Paths_hydra_tx
+  build-depends:
+    , base
+    , bytestring
+    , cardano-api
+    , cardano-crypto-class
+    , cardano-ledger-alonzo
+    , cardano-ledger-api
+    , cardano-ledger-conway
+    , cardano-ledger-conway:testlib
+    , cardano-ledger-core
+    , cardano-ledger-mary
+    , cardano-strict-containers
+    , cborg
+    , containers
+    , directory
+    , hydra-cardano-api
+    , hydra-plutus
+    , hydra-plutus-extras
+    , hydra-prelude
+    , hydra-test-utils
+    , hydra-tx
+    , lens
+    , plutus-ledger-api
+    , QuickCheck
+    , quickcheck-arbitrary-adt
+    , quickcheck-instances
+
+  ghc-options:     -haddock
+
+test-suite tests
+  import:             project-config
+  ghc-options:        -threaded -rtsopts -with-rtsopts=-N
+  hs-source-dirs:     test
+  main-is:            Main.hs
+  other-modules:
+    Hydra.Tx.ContestationPeriodSpec
+    Hydra.Tx.Contract.Abort
+    Hydra.Tx.Contract.Close.CloseInitial
+    Hydra.Tx.Contract.Close.CloseUnused
+    Hydra.Tx.Contract.Close.CloseUsed
+    Hydra.Tx.Contract.Close.Healthy
+    Hydra.Tx.Contract.CollectCom
+    Hydra.Tx.Contract.Commit
+    Hydra.Tx.Contract.Contest.ContestCurrent
+    Hydra.Tx.Contract.Contest.ContestDec
+    Hydra.Tx.Contract.Contest.Healthy
+    Hydra.Tx.Contract.ContractSpec
+    Hydra.Tx.Contract.Decrement
+    Hydra.Tx.Contract.Deposit
+    Hydra.Tx.Contract.FanOut
+    Hydra.Tx.Contract.Increment
+    Hydra.Tx.Contract.Init
+    Hydra.Tx.Contract.Recover
+    Hydra.Tx.HeadIdSpec
+    Hydra.Tx.IsTxSpec
+    Spec
+
+  type:               exitcode-stdio-1.0
+  build-depends:
+    , aeson
+    , base
+    , base16-bytestring
+    , cardano-api
+    , cardano-binary
+    , cardano-crypto-class
+    , cardano-ledger-alonzo
+    , cardano-ledger-api
+    , cardano-ledger-babbage
+    , cardano-ledger-core
+    , containers
+    , hspec
+    , hspec-golden-aeson
+    , hydra-cardano-api
+    , hydra-plutus
+    , hydra-plutus-extras
+    , hydra-prelude
+    , hydra-test-utils
+    , hydra-tx
+    , hydra-tx:testlib
+    , lens
+    , plutus-ledger-api
+    , plutus-ledger-api:plutus-ledger-api-testlib
+    , plutus-tx
+    , QuickCheck
+    , quickcheck-instances
+    , time
+
+  build-tool-depends: hspec-discover:hspec-discover
+  ghc-options:        -threaded -rtsopts
+
+executable hydra-tx
+  import:         project-config
+  hs-source-dirs: exe
+  main-is:        Main.hs
+  other-modules:  Options
+  build-depends:
+    , aeson
+    , attoparsec
+    , base
+    , bytestring
+    , cardano-api
+    , hydra-cardano-api
+    , hydra-prelude
+    , hydra-tx
+    , optparse-applicative
+    , time
+
+  ghc-options:    -threaded -rtsopts -with-rtsopts=-N4

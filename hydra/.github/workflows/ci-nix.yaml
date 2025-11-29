@@ -1,0 +1,180 @@
+name: "CI"
+
+# Limit concurrent runs of this workflow within a single PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+on:
+  # We're using merge-chains; so this needs to run then.
+  merge_group:
+  push:
+    branches:
+    - master
+    - release
+  pull_request:
+  schedule:
+    # Everyday at 4:00 AM
+    - cron: "0 4 * * *"
+  # Allows to trigger runs on any branch
+  workflow_dispatch:
+
+permissions:
+  checks: write
+  pull-requests: write
+
+jobs:
+  build-test:
+    name: "Build & test"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        package:
+          - hydra-plutus
+          - hydra-tx
+          - hydra-chain-observer
+          - hydra-node
+          - hydra-cluster
+          - hydra-tui
+        os:
+          - ubuntu-latest
+          - ubuntu-24.04-arm
+        exclude:
+          - package: hydra-cluster
+            os: ubuntu-24.04-arm
+          - package: hydra-tui
+            os: ubuntu-24.04-arm
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: ❄ Setup Nix/Cachix
+      uses: ./.github/actions/nix-cachix-setup
+      with:
+        authToken: '${{ secrets.CACHIX_CARDANO_SCALING_AUTH_TOKEN }}'
+
+    - name: ❓ Test
+      if: ${{ matrix.package != 'hydra-tui' }}
+      run: |
+        cd ${{ matrix.package }} # To ensure the `./golden` files are available.
+        nix develop .#${{ matrix.package }}-tests --command tests
+
+    # This one is special, as it requires a tty.
+    - name: ❓ Test (TUI)
+      id: test_tui
+      if: ${{ matrix.package == 'hydra-tui' }}
+      # https://giters.com/gfx/example-github-actions-with-tty
+      # The default shell does not allocate a TTY which breaks some tests
+      shell: 'script -q -e -c "bash {0}"'
+      env:
+        TERM: "xterm"
+      run: |
+        cd ${{ matrix.package  }}
+        nix develop .#${{ matrix.package }}-tests --command tests
+
+    # NOTE: This depends on the path used in hydra-cluster e2e tests
+    - name: 💾 Upload logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: hydra-cluster-e2e-test-logs
+        path: /tmp/nix-shell.*/hydra-cluster-e2e-*/logs/*
+        if-no-files-found: ignore
+
+  haddock:
+    name: "Build haddock using nix"
+    runs-on: ubuntu-latest
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: ❄ Setup Nix/Cachix
+      uses: ./.github/actions/nix-cachix-setup
+      with:
+        authToken: '${{ secrets.CACHIX_CARDANO_SCALING_AUTH_TOKEN }}'
+
+    - name: 📚 Documentation (Haddock)
+      run: |
+        nix build .#haddocks
+
+  benchmarks:
+    name: "Benchmarks"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - package: hydra-node
+            bench: tx-cost
+            options: '--output-directory $(pwd)/../benchmarks'
+          - package: hydra-node
+            bench: micro
+            options: '-o $(pwd)/../benchmarks/ledger-bench.html'
+          - package: hydra-cluster
+            bench: bench-e2e
+            options: 'datasets datasets/1-node.json datasets/3-nodes.json --output-directory $(pwd)/../benchmarks --timeout 1000s'
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: ❄ Setup Nix/Cachix
+      uses: ./.github/actions/nix-cachix-setup
+      with:
+        authToken: '${{ secrets.CACHIX_CARDANO_SCALING_AUTH_TOKEN }}'
+
+    - name: 📈 Benchmark
+      run: |
+        mkdir -p benchmarks
+        cd ${{ matrix.package }}
+        nix build .#${{ matrix.package }}-bench
+        nix develop .#${{ matrix.package }}-bench --command ${{ matrix.bench }} ${{ matrix.options }}
+
+    - name: 💾 Upload build & test artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: benchmarks-${{matrix.package}}-${{matrix.bench}}
+        path: benchmarks
+
+    # NOTE: This depends on the path used in hydra-cluster bench
+    - name: 💾 Upload logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: hydra-cluster-bench-logs
+        path: /tmp/nix-shell.*/bench-*/**/*.log
+        if-no-files-found: ignore
+
+  publish-benchmark-results:
+    name: Publish benchmark results
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    # TODO: this is actually only requires the tx-cost benchmark results
+    needs: [benchmarks]
+    runs-on: ubuntu-latest
+    steps:
+    - name: 📥 Download generated documentation
+      uses: actions/download-artifact@v5
+      with:
+        path: artifact
+        pattern: benchmarks-*
+        merge-multiple: true
+
+    - name: ⚙ Prepare comment body
+      id: comment-body
+      run: |
+        # Drop first 5 header lines and demote headlines one level
+        cat <(cat artifact/transaction-cost.md | sed '1,5d;s/^#/##/') <(cat artifact/end-to-end-benchmarks.md | sed '1,5d;s/^#/##/') | grep -v '^:::' > comment-body.md
+
+    - name: 🔎 Find Comment
+      uses: peter-evans/find-comment@v3
+      id: find-comment
+      with:
+        issue-number: ${{ github.event.pull_request.number }}
+        comment-author: 'github-actions[bot]'
+        body-includes: Transaction costs
+
+    - name: ✏ Create or update comment
+      uses: peter-evans/create-or-update-comment@v4
+      with:
+        comment-id: ${{ steps.find-comment.outputs.comment-id }}
+        edit-mode: replace
+        issue-number: ${{ github.event.pull_request.number }}
+        body-file: comment-body.md
+        reactions: rocket

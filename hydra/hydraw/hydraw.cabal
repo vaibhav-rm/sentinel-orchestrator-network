@@ -1,0 +1,58 @@
+cabal-version: 2.2
+name:          hydraw
+version:       0.0.1
+build-type:    Simple
+
+common project-config
+  default-language:   GHC2021
+  default-extensions:
+    DataKinds
+    DefaultSignatures
+    DeriveAnyClass
+    DerivingStrategies
+    FunctionalDependencies
+    GADTs
+    LambdaCase
+    MultiWayIf
+    NoImplicitPrelude
+    OverloadedStrings
+    PartialTypeSignatures
+    TypeFamilies
+    ViewPatterns
+
+  ghc-options:
+    -Wall -Wcompat -Widentities -Wincomplete-record-updates
+    -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
+    -fprint-potential-instances -Wmissing-local-signatures
+
+library
+  import:          project-config
+  hs-source-dirs:  src
+  exposed-modules: Hydra.Painter
+  build-depends:
+    , aeson
+    , base
+    , cardano-api
+    , http-conduit
+    , hydra-cardano-api
+    , hydra-node
+    , hydra-prelude
+    , text
+    , websockets
+
+executable hydraw
+  import:         project-config
+  hs-source-dirs: app
+  main-is:        Main.hs
+  ghc-options:    -threaded -rtsopts
+  build-depends:
+    , http-types
+    , hydra-cardano-api
+    , hydra-node
+    , hydra-prelude
+    , hydraw
+    , safe
+    , wai
+    , wai-websockets
+    , warp
+    , websockets

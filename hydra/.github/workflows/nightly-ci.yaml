@@ -1,0 +1,74 @@
+name: "Nightly CI"
+
+# Limit concurrent runs of this workflow within a single PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+on:
+  schedule:
+    # Everyday at 4:00 AM
+    - cron: "0 4 * * *"
+  # Allows to trigger runs on any branch
+  workflow_dispatch:
+
+permissions:
+  checks: write
+  pull-requests: write
+
+jobs:
+  build-test:
+    name: "Nightly Blockfrost e2e tests"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - package: hydra-cluster
+    env:
+      HYDRA_BACKEND: blockfrost
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: ❄ Setup Nix/Cachix
+      uses: ./.github/actions/nix-cachix-setup
+      with:
+        authToken: '${{ secrets.CACHIX_CARDANO_SCALING_AUTH_TOKEN }}'
+
+    - name: ❓ E2E Blockfrost Test
+      run: |
+        if [[ "${{secrets.blockfrost_token}}" != '' ]]; then
+          cd ${{ matrix.package }}
+          echo "${{secrets.blockfrost_token}}" > blockfrost-project.txt
+          nix develop .#${{ matrix.package }}-tests --command tests -m "nightly"
+        else
+          echo "::warning file=blockfrost-project.txt,title=BLOCKFROST::Missing blockfrost project file."
+        fi
+
+
+  other-nightly-tests:
+    name: "Nightly tests"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - package: hydra-plutus
+          - package: hydra-tx
+          - package: hydra-chain-observer
+          - package: hydra-node
+          - package: hydra-cluster
+          # Note: Missing hydra-tui
+    env:
+      CI_NIGHTLY: True
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: ❄ Setup Nix/Cachix
+      uses: ./.github/actions/nix-cachix-setup
+      with:
+        authToken: '${{ secrets.CACHIX_CARDANO_SCALING_AUTH_TOKEN }}'
+
+    - name: Run tests
+      run: |
+        cd ${{ matrix.package }}
+        nix develop .#${{ matrix.package }}-tests --command tests -m "@nightly"

@@ -1,0 +1,621 @@
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "Lexend";
+  font-weight: 400;
+  src: url("/fonts/Lexend-VariableFont.ttf");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Lexend";
+  font-weight: 500;
+  src: url("/fonts/Lexend-VariableFont.ttf");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Lexend";
+  font-weight: 600;
+  src: url("/fonts/Lexend-VariableFont.ttf");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inter";
+  font-weight: 400;
+  src: url("/fonts/Inter-VariableFont.ttf");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inter";
+  font-weight: 400;
+  font-style: italic;
+  src: url("/fonts/Inter-Italic-VariableFont.ttf");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inter";
+  font-weight: 700;
+  src: url("/fonts/Inter-VariableFont.ttf");
+  font-display: swap;
+}
+
+/* You can override the default Infima variables here. */
+:root {
+  /* The original violet accent we use */
+  --ifm-color-primary: #6875e8;
+  /* Created using https://colordesigner.io/color-scheme-builder */
+  /* 6 steps to white, first 4 after main */
+  --ifm-color-primary-light: #9099e2;
+  --ifm-color-primary-lighter: #b4b8e2;
+  --ifm-color-primary-lightest: #d2d4e6;
+  --ifm-color-primary-extralight: #ebecf0;
+  /* 6 steps to black, first 3 after main */
+  --ifm-color-primary-dark: #3847c4;
+  --ifm-color-primary-darker: #353b73;
+  --ifm-color-primary-darkest: #222432;
+
+  /* Another blue color we like */
+  --ifm-color-secondary: #3c9ec8;
+  /* Created using https://colordesigner.io/color-scheme-builder */
+  /* 6 steps to white, first 4 after main */
+  --ifm-color-secondary-light: #6eadc8;
+  --ifm-color-secondary-lighter: #9bbecd;
+  --ifm-color-secondary-lightest: #c2d1d8;
+  --ifm-color-secondary-extralight: #e3e7e9;
+  /* 6 steps to black, first 3 after main */
+  --ifm-color-secondary-dark: #397b97;
+  --ifm-color-secondary-darker: #345868;
+  --ifm-color-secondary-darkest: #283940;
+
+  --ifm-code-font-size: 95%;
+  --ifm-navbar-height: 56px;
+  font-family: "Inter";
+  --ifm-color-emphasis-600: #283032;
+  --doc-sidebar-hidden-width: 100px !important;
+}
+
+/* For readability concerns, you should choose a lighter palette in dark mode. */
+html:not(.plugin-pages)[data-theme="dark"] {
+  --ifm-color-primary: var(--ifm-color-primary-light);
+}
+
+html.plugin-pages[data-theme='dark'] {
+  --ifm-navbar-link-color: #1c1e21;
+}
+
+html.plugin-pages .navColorModeToggle {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --ifm-navbar-height: 96px;
+  }
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: "Lexend";
+}
+
+.section-label {
+  font-family: "Inter";
+}
+
+h5,
+h6 {
+  font-family: "Inter";
+}
+
+h4 {
+  line-height: 30px !important;
+}
+
+html:not([data-theme='dark']),
+html.plugin-pages {
+  @apply text-black;
+}
+
+.docusaurus-highlight-code-line {
+  background-color: rgba(0, 0, 0, 0.1);
+  display: block;
+  margin: 0 calc(-1 * var(--ifm-pre-padding));
+  padding: 0 var(--ifm-pre-padding);
+}
+
+[data-theme="dark"] .docusaurus-highlight-code-line {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* Custom sidebar section headers */
+.sidebar-header {
+  opacity: 0.9;
+}
+
+/* Ensure footer is drawn over api reference side bar. */
+.footer {
+  z-index: 20;
+}
+
+.footer__link-item {
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.pageContainer {
+  max-width: 1280px;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+@media (min-width: 768px) {
+  .pageContainer {
+    padding-left: 48px;
+    padding-right: 48px;
+  }
+}
+
+.component {
+  padding-top: 72px;
+  padding-bottom: 72px;
+}
+
+.component-sm {
+  padding-top: 63px;
+  padding-bottom: 63px;
+}
+
+.component-xs {
+  padding-top: 56px;
+  padding-bottom: 56px;
+}
+
+.component-lg {
+  padding-top: 96px;
+  padding-bottom: 96px;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+.homepageText {
+  font-size: 32px;
+  text-align: left;
+  letter-spacing: -0.4px;
+  line-height: 48px;
+  color: var(--ifm-color-primary);
+}
+
+@media (min-width: 768px) {
+  .homepageText {
+    font-size: 40px;
+    text-align: center;
+  }
+}
+
+.image {
+  height: inherit;
+}
+
+.loader,
+.loader:before,
+.loader:after {
+  background: var(--ifm-color-primary);
+  -webkit-animation: load1 1s infinite ease-in-out;
+  animation: load1 1s infinite ease-in-out;
+  width: 1em;
+  height: 4em;
+}
+
+.loader {
+  color: var(--ifm-color-primary);
+  text-indent: -9999em;
+  margin: 88px auto;
+  position: relative;
+  font-size: 11px;
+  -webkit-transform: translateZ(0);
+  -ms-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-animation-delay: -0.16s;
+  animation-delay: -0.16s;
+}
+
+.loader:before,
+.loader:after {
+  position: absolute;
+  top: 0;
+  content: "";
+}
+
+.loader:before {
+  left: -1.5em;
+  -webkit-animation-delay: -0.32s;
+  animation-delay: -0.32s;
+}
+
+.loader:after {
+  left: 1.5em;
+}
+
+@-webkit-keyframes load1 {
+
+  0%,
+  80%,
+  100% {
+    box-shadow: 0 0;
+    height: 4em;
+  }
+
+  40% {
+    box-shadow: 0 -2em;
+    height: 5em;
+  }
+}
+
+@keyframes load1 {
+
+  0%,
+  80%,
+  100% {
+    box-shadow: 0 0;
+    height: 4em;
+  }
+
+  40% {
+    box-shadow: 0 -2em;
+    height: 5em;
+  }
+}
+
+svg.architecture {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.navbar__title {
+  font-size: 19px;
+  letter-spacing: -0.142px;
+  line-height: normal;
+  font-weight: 400;
+  font-family: "Lexend";
+}
+
+@media (min-width: 1024px) {
+  .navbar__title {
+    font-size: 24px;
+    line-height: normal;
+    letter-spacing: -0.18px;
+  }
+}
+
+html.plugin-pages .navbar__brand:hover {
+  color: #283032;
+}
+
+.navbar__item {
+  font-weight: 600;
+}
+
+.navbar__items--right {
+  display: flex !important;
+  font-family: "Lexend";
+}
+
+.navbar__item:nth-of-type(6) {
+  order: 2;
+}
+
+.navbar__itemt:nth-of-type(8) {
+  order: 1;
+}
+
+.navbar__item:nth-of-type(7) {
+  order: 3;
+}
+
+.DocSearch-Button {
+  margin: 0 10px 0 16px !important;
+}
+
+.DocSearch-Button .DocSearch-Search-Icon {
+  color: black !important;
+  height: 24px !important;
+  width: 24px;
+}
+
+html:not(.plugin-pages)[data-theme='dark'] .DocSearch-Button .DocSearch-Search-Icon {
+  color: white !important;
+}
+
+.DocSearch-Button {
+  padding: 0 !important;
+}
+
+.searchBox_src-theme-Navbar-Search-styles-module {
+  padding: 4px 12px !important;
+  /* padding-left: 0px !important; */
+}
+
+.DocSearch-Button:hover {
+  box-shadow: none !important;
+}
+
+.DocSearch-Button {
+  background: none !important;
+  height: 24px !important;
+  width: 24px !important;
+}
+
+.DocSearch-Button:hover .DocSearch-Search-Icon {
+  color: #7196a7 !important;
+}
+
+.DocSearch-Button-Keys {
+  display: none !important;
+}
+
+.DocSearch-Button-Placeholder {
+  display: none;
+}
+
+.navbar__toggle {
+  margin-right: 0 !important;
+  margin-left: 32px;
+}
+
+.mobile-side-menu>.menu__list-item>.menu__link {
+  color: #283032 !important;
+}
+
+.breadcrumbHomeIcon_src-theme-DocBreadcrumbs-Items-Home-styles-module {
+  height: 100% !important;
+  width: 100% !important;
+}
+
+.breadcrumbs__link {
+  margin-bottom: -8px !important;
+}
+
+.menu {
+  padding: 24px !important;
+}
+
+.menu__link--active {
+  background-color: #e7eef0 !important;
+  font-weight: 700;
+}
+
+.breadcrumbs__item--active>span {
+  background-color: #e7eef0 !important;
+}
+
+.container {
+  padding: 24px !important;
+}
+
+@media (min-width: 768px) {
+  .markdown {
+    padding: 32px 0 16px 0px !important;
+  }
+
+  .container {
+    padding: 24px 32px 56px 32px !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .markdown {
+    padding: 56px !important;
+    padding-right: 0 !important;
+  }
+
+  .container {
+    padding: 24px 16px 24px 16px !important;
+  }
+}
+
+#__blog-post-container.markdown {
+  padding: 0 !important;
+}
+
+.theme-edit-this-page {
+  display: inline-flex;
+}
+
+.col--3 {
+  padding-right: 56px !important;
+  padding-top: 0;
+}
+
+.collapseSidebarButton {
+  display: block;
+}
+
+.container {
+  border-bottom: solid 1px #eaeaea;
+}
+
+.navbar-sidebar__item {
+  width: 100vw !important;
+}
+
+.navbar-sidebar__items--show-secondary {
+  margin-left: -15%;
+}
+
+/* Collapsible button */
+.theme-doc-toc-mobile {
+  @apply !bg-transparent;
+}
+
+.theme-doc-toc-mobile>button {
+  @apply font-semibold text-black rounded p-4 mt-12 bg-primary-extralight;
+}
+
+.theme-doc-toc-mobile>div>ul {
+  @apply border-none;
+}
+
+.theme-doc-toc-mobile>button::after {
+  @apply bg-cover;
+}
+
+/**
+ * Markdown area
+ *
+ * Applying custom markdown styles here because Tailwind's reset is overriding Docusaurus styles, 
+ * preventing the use of CSS variables defined in :root for a few settings
+ */
+.markdown {
+  line-height: 1.65;
+}
+
+.markdown>h1 {
+  font-size: 2rem;
+}
+
+.markdown>h2 {
+  font-size: 1.8rem;
+}
+
+.markdown>h3 {
+  font-size: 1.5rem;
+}
+
+.markdown>h4 {
+  font-size: 1rem;
+}
+
+.markdown>h5 {
+  font-size: 0.875rem;
+}
+
+.markdown>h6 {
+  font-size: 0.75rem;
+}
+
+.markdown a {
+  color: var(--ifm-color-primary);
+  text-decoration-color: var(--ifm-color-primary);
+}
+
+.markdown a.card {
+  color: inherit;
+}
+
+.markdown a.card h2 {
+  padding-bottom: 0.5em;
+}
+
+.markdown ol,
+.markdown ul {
+  list-style: inherit;
+  margin: 0 0 var(--ifm-list-margin);
+  padding-left: var(--ifm-list-left-padding);
+}
+
+.markdown>ul {
+  margin-bottom: var(--ifm-leading);
+}
+
+.markdown ul ul {
+  list-style: circle;
+  margin: 0;
+}
+
+.markdown ul ul ul {
+  list-style: square;
+}
+
+.markdown ul ol {
+  list-style: lower-roman;
+}
+
+.markdown ol {
+  list-style: decimal;
+}
+
+.markdown ol ul {
+  list-style: circle;
+}
+
+.markdown li+li {
+  margin-top: var(--ifm-list-item-margin);
+}
+
+.markdown .contains-task-list {
+  list-style: none;
+}
+
+.markdown .tabs {
+  margin-bottom: 0;
+  padding-left: 0;
+}
+
+.markdown blockquote {
+  margin: 0 0 var(--ifm-spacing-vertical);
+}
+
+.markdown code,
+.markdown pre {
+  font-size: var(--ifm-code-font-size);
+}
+
+.theme-admonition p {
+  margin-bottom: 0.5em;
+}
+
+.theme-admonition p:last-child {
+  margin-bottom: 0;
+}
+
+.navbar-version {
+  background-color: var(--ifm-color-primary-dark);
+  color: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
+  margin-right: 1rem;
+}
+
+div.announcementBar {
+  background-color: var(--ifm-background-surface-color);
+  color: var(--ifm-font-color-base);
+  font-weight: bold;
+}
+
+div.announcementBar a {
+  text-decoration: underline;
+}
+
+html[data-theme='dark'] .table-of-contents__link:hover,
+html[data-theme='dark'] .table-of-contents__link--active {
+  color: var(--ifm-color-primary-light);
+}

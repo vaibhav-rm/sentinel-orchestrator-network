@@ -1,0 +1,45 @@
+{
+    "samples": [
+        {
+            "env": {
+                "configuredPeers": "s",
+                "contestationPeriod": 43200,
+                "depositPeriod": 60080,
+                "otherParties": [],
+                "participants": [],
+                "party": {
+                    "vkey": "348cdf360a866dedf92cb18cfb736c2da212ea44d2f1270fe60dad88801be97c"
+                },
+                "signingKey": "23db2c1b05cc1c905486253e1a39b0df087217f33180f7d5cf4aa1ec8c0b6634"
+            },
+            "headStatus": "Closed",
+            "hydraHeadId": "01000001000001000000000001000101",
+            "hydraNodeVersion": "G",
+            "me": {
+                "vkey": "3d8fb298d77d2fda814e9530b5539758751d27ad1c234080e04ec2e15dea1490"
+            },
+            "networkInfo": {
+                "networkConnected": true,
+                "peersInfo": {
+                    "127.0.0.1:5000": true,
+                    "peer.local:5001": false
+                }
+            },
+            "snapshotUtxo": {
+                "0101010101010001010001010001010101010001010000000100010101010100#30": {
+                    "address": "addr_test1xqqxwuptvt44m42v49ux7l37cy6zg9ylxpr0ltmsnaedfx9frwx7crjjl27pwadu3a4vere9d2cmrm8x2xey5rmzw73sfcqwk4",
+                    "datum": null,
+                    "datumhash": "da0beccb4644ffb9db547cb2c058ee0b27abe96774d43dd85884483b5452b696",
+                    "inlineDatum": null,
+                    "inlineDatumRaw": null,
+                    "referenceScript": null,
+                    "value": {
+                        "lovelace": 45000000000000000
+                    }
+                }
+            },
+            "tag": "Greetings"
+        }
+    ],
+    "seed": -307089451
+}

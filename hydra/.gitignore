@@ -1,0 +1,44 @@
+# Cabal
+.ghc.environment.*
+/cabal.project.diff
+/cabal.project.local
+/cabal.project.old
+/dist-newstyle/
+
+# Haskell
+*.eventlog
+*.hp
+*.prof
+.hspec-failures
+
+# Nix
+result*
+
+# Direnv
+.direnv/
+*~
+
+# hydra-node
+.history
+*.hi
+*.o
+
+# Benchmark results
+*.html
+!index.html
+
+# Getting started / demo instructions
+/demo/.env
+/demo/devnet/
+/docs/static/haddock/
+devnet/
+
+# tx-cost-difference files
+diff.md
+old.md
+new.md
+new-headers.txt
+/.env
+
+# Blockfrost environment
+blockfrost-project.txt

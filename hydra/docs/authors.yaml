@@ -1,0 +1,47 @@
+ch1bo:
+  name: Sebastian Nagel
+  title: Software Engineering Lead
+  url: https://github.com/ch1bo
+  image_url: https://github.com/ch1bo.png
+
+abailly:
+  name: Arnaud Bailly
+  title: Lead Architect
+  url: https://github.com/abailly-iohk
+  image_url: https://github.com/abailly-iohk.png
+
+ffakenz:
+  name: Franco Testagrossa
+  title: Senior Software Engineer
+  url: https://github.com/ffakenz
+  image_url: https://github.com/ffakenz.png
+
+pgrange:
+  name: Pascal Grange
+  title: Senior Software Engineer
+  url: https://github.com/pgrange
+  image_url: https://github.com/pgrange.png
+
+v0d1ch:
+  name: Sasha Bogicevic
+  title: Senior Software Engineer
+  url: https://github.com/v0d1ch
+  image_url: https://github.com/v0d1ch.png
+
+locallycompact:
+  name: Daniel Firth
+  title: Senior Software Engineer
+  url: https://github.com/locallycompact
+  image_url: https://github.com/locallycompact.png
+
+cardenaso11:
+  name: Elaine Cardenas
+  title: Software Engineer
+  url: https://github.com/cardenaso11
+  image_url: https://github.com/cardenaso11.png
+
+quantumplation:
+  name: Pi Lanningham
+  title: Chief Technology Officer, Sundae Labs
+  url: https://github.com/quantumplation
+  image_url: https://github.com/quantumplation.png
