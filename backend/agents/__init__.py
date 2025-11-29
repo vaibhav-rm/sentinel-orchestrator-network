@@ -43,6 +43,19 @@ from .base import (
 )
 
 # =============================================================================
+# LLM CONFIGURATION (Gemini Integration)
+# =============================================================================
+
+from .llm_config import (
+    AgentLLM,
+    GEMINI_API_KEY,
+    GEMINI_MODEL,
+    LLM_ENABLED,
+    init_gemini_client,
+    get_gemini_model,
+)
+
+# =============================================================================
 # AGENT IMPLEMENTATIONS
 # =============================================================================
 
@@ -76,6 +89,14 @@ __all__ = [
     "BaseAgent",
     "Vote",
     "Severity",
+    
+    # LLM Configuration
+    "AgentLLM",
+    "GEMINI_API_KEY",
+    "GEMINI_MODEL",
+    "LLM_ENABLED",
+    "init_gemini_client",
+    "get_gemini_model",
     
     # Agents
     "SentinelAgent",

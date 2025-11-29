@@ -73,21 +73,28 @@ class SentinelAgent(BaseAgent):
     This agent:
     1. Fetches contract data from Blockfrost (PLACEHOLDER for now)
     2. Runs regex-based threat detection patterns
-    3. Calculates a risk score (0-100)
-    4. Generates an evidence hash of findings
-    5. Casts a vote (SAFE/WARNING/DANGER)
+    3. Uses LLM (Gemini) for enhanced threat analysis when available
+    4. Calculates a risk score (0-100)
+    5. Generates an evidence hash of findings
+    6. Casts a vote (SAFE/WARNING/DANGER)
+    
+    LLM Enhancement:
+    - When LLM is available, provides deeper analysis of detected threats
+    - Generates human-readable explanations for findings
+    - Falls back to pure rule-based detection if LLM unavailable
     
     Performance: Must complete in < 2 seconds
     """
     
-    def __init__(self, blockfrost_api_key: Optional[str] = None):
+    def __init__(self, blockfrost_api_key: Optional[str] = None, enable_llm: bool = True):
         """
         Initialize the Sentinel Agent.
         
         Args:
             blockfrost_api_key: API key for Blockfrost (optional, uses mock if None)
+            enable_llm: Whether to enable LLM-enhanced analysis
         """
-        super().__init__(agent_name="sentinel", role="expert_detector")
+        super().__init__(agent_name="sentinel", role="expert_detector", enable_llm=enable_llm)
         
         # Store API key for Blockfrost integration
         # PLACEHOLDER: In production, this would connect to real Blockfrost
@@ -137,18 +144,39 @@ class SentinelAgent(BaseAgent):
         # Step 5: Determine vote based on score
         vote = self.determine_vote(risk_score)
         
+        # Step 6: Use LLM for enhanced analysis (if available)
+        llm_analysis = None
+        if self.has_llm:
+            try:
+                llm_analysis = await self.llm.analyze_threat(
+                    contract_data=contract_data,
+                    findings=findings,
+                    context=f"Scan depth: {scan_depth}"
+                )
+                self.logger.debug("LLM analysis completed successfully")
+            except Exception as e:
+                self.logger.warning(f"LLM analysis failed, using rule-based only: {e}")
+        
         self.log_complete(vote, risk_score)
         
         # Return structured output for next agent (Oracle)
-        return {
+        result = {
             "agent": "sentinel",
             "policy_id": policy_id,
             "risk_score": risk_score,
             "findings": findings,
             "evidence_hash": evidence_hash,
             "timestamp": self.get_timestamp(),
-            "vote": vote.value
+            "vote": vote.value,
+            "llm_enabled": self.has_llm
         }
+        
+        # Add LLM analysis if available
+        if llm_analysis:
+            result["llm_analysis"] = llm_analysis.get("llm_analysis")
+            result["llm_model"] = llm_analysis.get("model_used")
+        
+        return result
     
     # -------------------------------------------------------------------------
     # PRIVATE METHODS

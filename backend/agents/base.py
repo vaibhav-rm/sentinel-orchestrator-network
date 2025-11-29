@@ -6,6 +6,11 @@ Sentinel Orchestrator Network (SON) - Base Agent Class
 This module provides the base class that all SON agents inherit from.
 It defines common functionality like logging, timing, and output formatting.
 
+LLM Integration:
+- Uses Gemini (gemini-2.5-flash) as the AI reasoning engine
+- LLM is optional - agents fall back to rule-based logic if unavailable
+- Configure via GEMINI_API_KEY in .env
+
 =============================================================================
 """
 
@@ -15,6 +20,9 @@ from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from enum import Enum
+
+# Import LLM configuration
+from .llm_config import AgentLLM, GEMINI_MODEL, LLM_ENABLED
 
 
 # =============================================================================
@@ -50,15 +58,22 @@ class BaseAgent(ABC):
     - Timestamp generation (ISO 8601)
     - Hash generation for evidence
     - Standard output formatting
+    - LLM integration via Gemini API
+    
+    LLM Configuration:
+    - Model: gemini-2.5-flash (configurable via GEMINI_MODEL env var)
+    - The LLM enhances agent reasoning but is not required
+    - Agents use rule-based fallback when LLM is unavailable
     """
     
-    def __init__(self, agent_name: str, role: str):
+    def __init__(self, agent_name: str, role: str, enable_llm: bool = True):
         """
         Initialize the base agent.
         
         Args:
             agent_name: Human-readable name (e.g., "sentinel", "oracle")
             role: CrewAI role type (e.g., "expert_detector")
+            enable_llm: Whether to enable LLM capabilities for this agent
         """
         self.agent_name = agent_name
         self.role = role
@@ -74,6 +89,15 @@ class BaseAgent(ABC):
                 f'[%(asctime)s] [{agent_name.upper()}] %(levelname)s: %(message)s'
             ))
             self.logger.addHandler(handler)
+        
+        # Initialize LLM helper for enhanced reasoning
+        self.llm: Optional[AgentLLM] = None
+        if enable_llm and LLM_ENABLED:
+            self.llm = AgentLLM(agent_name)
+            if self.llm.is_available:
+                self.logger.info(f"LLM brain enabled (model: {GEMINI_MODEL})")
+            else:
+                self.logger.debug("LLM not available - using rule-based logic")
     
     # -------------------------------------------------------------------------
     # UTILITY METHODS - Used by all agents
@@ -130,6 +154,11 @@ class BaseAgent(ABC):
     def log_complete(self, vote: Vote, score: int) -> None:
         """Log that the agent completed processing"""
         self.logger.info(f"Analysis complete. Vote: {vote.value}, Score: {score}")
+    
+    @property
+    def has_llm(self) -> bool:
+        """Check if LLM is available for this agent."""
+        return self.llm is not None and self.llm.is_available
     
     # -------------------------------------------------------------------------
     # ABSTRACT METHOD - Must be implemented by each agent

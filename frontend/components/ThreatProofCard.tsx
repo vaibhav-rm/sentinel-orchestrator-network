@@ -1,0 +1,124 @@
+import React, { useRef } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { Float, MeshDistortMaterial } from "@react-three/drei";
+import { Card } from "./ui/Card";
+import { Button } from "./ui/Button";
+import { X, Download, Share2 } from "lucide-react";
+import { Mesh } from "three";
+
+function ShieldModel({ color }: { color: string }) {
+    const meshRef = useRef<Mesh>(null!);
+
+    useFrame((state) => {
+        if (meshRef.current) {
+            meshRef.current.rotation.y += 0.01;
+            meshRef.current.rotation.x = Math.sin(state.clock.getElapsedTime() * 0.5) * 0.2;
+        }
+    });
+
+    return (
+        <Float speed={2} rotationIntensity={0.5} floatIntensity={1}>
+            <mesh ref={meshRef}>
+                <icosahedronGeometry args={[2.5, 0]} />
+                <MeshDistortMaterial
+                    color={color}
+                    emissive={color}
+                    emissiveIntensity={0.5}
+                    wireframe
+                    distort={0.3}
+                    speed={2}
+                />
+            </mesh>
+        </Float>
+    );
+}
+
+interface ThreatProofCardProps {
+    onClose: () => void;
+    verdict: "SAFE" | "DANGER";
+}
+
+export const ThreatProofCard: React.FC<ThreatProofCardProps> = ({ onClose, verdict }) => {
+    const color = verdict === "SAFE" ? "#00F5FF" : "#FF006E";
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <Card className="w-full max-w-4xl h-[600px] flex overflow-hidden relative border-neon-orchid/50">
+                <Button
+                    variant="secondary"
+                    className="absolute top-4 right-4 z-10 !p-2 rounded-full border-none hover:bg-white/10"
+                    onClick={onClose}
+                >
+                    <X className="w-6 h-6" />
+                </Button>
+
+                {/* Left Panel: 3D Visualization */}
+                <div className="w-1/2 h-full bg-gradient-to-b from-obsidian-core to-void-gray relative">
+                    <div className="absolute top-4 left-4 font-orbitron text-white/50 text-sm">
+                        THREATPROOF CAPSULE #8847
+                    </div>
+                    <Canvas className="w-full h-full">
+                        <ambientLight intensity={0.5} />
+                        <pointLight position={[10, 10, 10]} />
+                        <ShieldModel color={color} />
+                    </Canvas>
+                </div>
+
+                {/* Right Panel: Metadata */}
+                <div className="w-1/2 h-full p-8 flex flex-col justify-between bg-obsidian-core/95">
+                    <div className="space-y-6">
+                        <div>
+                            <h3 className="text-2xl font-orbitron text-white mb-2">EVIDENCE LOG</h3>
+                            <div className="h-1 w-20 bg-gradient-to-r from-neon-orchid to-transparent" />
+                        </div>
+
+                        <div className="space-y-4 font-mono text-sm">
+                            <div className="flex justify-between border-b border-white/10 pb-2">
+                                <span className="text-white/50">Incident ID</span>
+                                <span className="text-white">0xF7A2C931...</span>
+                            </div>
+                            <div className="flex justify-between border-b border-white/10 pb-2">
+                                <span className="text-white/50">Timestamp</span>
+                                <span className="text-white">2025-01-30 14:23:07 UTC</span>
+                            </div>
+                            <div className="flex justify-between border-b border-white/10 pb-2">
+                                <span className="text-white/50">Verdict</span>
+                                <span className={verdict === "SAFE" ? "text-electric-cyan" : "text-neon-orchid"}>
+                                    {verdict === "SAFE" ? "VERIFIED_SAFE" : "UNSAFE_FORK"}
+                                </span>
+                            </div>
+                            <div className="flex justify-between border-b border-white/10 pb-2">
+                                <span className="text-white/50">Agent Cost</span>
+                                <span className="text-amber-warning">1.0 ₳</span>
+                            </div>
+                            <div className="flex justify-between border-b border-white/10 pb-2">
+                                <span className="text-white/50">Evidence Hash</span>
+                                <span className="text-white truncate max-w-[150px]">Qm...7x9 (IPFS)</span>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="text-xs text-white/40 uppercase tracking-wider">Collaborators</div>
+                            <div className="flex gap-2">
+                                <div className="px-3 py-1 rounded-full bg-neon-orchid/20 text-neon-orchid text-xs border border-neon-orchid/30">SENTINEL-01</div>
+                                <div className="px-3 py-1 rounded-full bg-electric-cyan/20 text-electric-cyan text-xs border border-electric-cyan/30">ORACLE-01</div>
+                                <div className="px-3 py-1 rounded-full bg-amber-warning/20 text-amber-warning text-xs border border-amber-warning/30">MIDNIGHT-ZK</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-4">
+                        <Button className="flex-1">
+                            <Download className="w-4 h-4 mr-2" />
+                            Mint NFT
+                        </Button>
+                        <Button variant="secondary" className="flex-1">
+                            <Share2 className="w-4 h-4 mr-2" />
+                            Share
+                        </Button>
+                    </div>
+                </div>
+            </Card>
+        </div>
+    );
+};

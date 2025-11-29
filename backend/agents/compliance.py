@@ -78,20 +78,27 @@ class ComplianceAgent(BaseAgent):
     1. Checks wallets against sanctions lists (OFAC, etc.)
     2. Analyzes wallet age and transaction patterns
     3. Identifies behavioral red flags
-    4. Calculates compliance risk modifier (0.5 - 2.0)
-    5. Casts compliance-weighted vote
+    4. Uses LLM (Gemini) for enhanced compliance reasoning when available
+    5. Calculates compliance risk modifier (0.5 - 2.0)
+    6. Casts compliance-weighted vote
+    
+    LLM Enhancement:
+    - When LLM is available, provides nuanced risk assessment
+    - Generates detailed compliance explanations
+    - Falls back to rule-based assessment if LLM unavailable
     
     Performance: Must complete in < 2 seconds
     """
     
-    def __init__(self, sanctions_api: Optional[str] = None):
+    def __init__(self, sanctions_api: Optional[str] = None, enable_llm: bool = True):
         """
         Initialize the Compliance Agent.
         
         Args:
             sanctions_api: External sanctions API endpoint (uses mock if None)
+            enable_llm: Whether to enable LLM-enhanced compliance assessment
         """
-        super().__init__(agent_name="compliance", role="compliance_checker")
+        super().__init__(agent_name="compliance", role="compliance_checker", enable_llm=enable_llm)
         
         # Sanctions API configuration (PLACEHOLDER for production)
         self.sanctions_api = sanctions_api
@@ -155,10 +162,22 @@ class ComplianceAgent(BaseAgent):
         )
         vote = self.determine_vote(risk_score)
         
+        # Step 7: Use LLM for enhanced compliance assessment (if available)
+        llm_assessment = None
+        if self.has_llm:
+            try:
+                llm_assessment = await self.llm.assess_compliance_risk(
+                    wallet_data=wallet_analysis,
+                    risk_indicators=risk_indicators
+                )
+                self.logger.debug("LLM compliance assessment completed successfully")
+            except Exception as e:
+                self.logger.warning(f"LLM compliance assessment failed: {e}")
+        
         self.log_complete(vote, risk_score)
         
         # Return structured output for ZK-Prover Agent
-        return {
+        result = {
             "agent": "compliance",
             "policy_id": policy_id,
             "creator_wallet": creator_wallet,
@@ -173,8 +192,16 @@ class ComplianceAgent(BaseAgent):
             "compliance_score": compliance_score,
             "vote": vote.value,
             "risk_score": risk_score,
-            "timestamp": self.get_timestamp()
+            "timestamp": self.get_timestamp(),
+            "llm_enabled": self.has_llm
         }
+        
+        # Add LLM assessment if available
+        if llm_assessment:
+            result["llm_assessment"] = llm_assessment.get("llm_compliance_assessment")
+            result["llm_model"] = llm_assessment.get("model_used")
+        
+        return result
     
     # -------------------------------------------------------------------------
     # SANCTIONS CHECKING

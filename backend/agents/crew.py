@@ -28,6 +28,7 @@ from .sentinel import SentinelAgent
 from .oracle import OracleAgent
 from .compliance import ComplianceAgent
 from .consensus import ConsensusAgent
+from .llm_config import LLM_ENABLED, GEMINI_MODEL
 # Note: ZK-Prover is imported but uses mock for now
 
 
@@ -146,20 +147,31 @@ class ThreatDetectionCrew:
     def _init_agents(self) -> None:
         """Initialize all 5 agents with their configurations."""
         
+        # Check if LLM should be enabled for agents
+        enable_llm = self.config.get("enable_llm", LLM_ENABLED)
+        
+        if enable_llm:
+            self.logger.info(f"Initializing agents with LLM brain (model: {GEMINI_MODEL})")
+        else:
+            self.logger.info("Initializing agents in rule-based mode (LLM disabled)")
+        
         # Agent A: Sentinel (Threat Detection)
         self.sentinel = SentinelAgent(
-            blockfrost_api_key=self.config.get("blockfrost_api_key")
+            blockfrost_api_key=self.config.get("blockfrost_api_key"),
+            enable_llm=enable_llm
         )
         
         # Agent B: Oracle (Cross-Verification)
         self.oracle = OracleAgent(
             wingriders_api=self.config.get("wingriders_api"),
-            minswap_api=self.config.get("minswap_api")
+            minswap_api=self.config.get("minswap_api"),
+            enable_llm=enable_llm
         )
         
         # Agent C: Compliance (Sanctions/Risk)
         self.compliance = ComplianceAgent(
-            sanctions_api=self.config.get("sanctions_api")
+            sanctions_api=self.config.get("sanctions_api"),
+            enable_llm=enable_llm
         )
         
         # Agent D: ZK-Prover (placeholder for now)
@@ -169,7 +181,8 @@ class ThreatDetectionCrew:
         # Agent E: Consensus (Final Arbiter)
         self.consensus = ConsensusAgent(
             hydra_endpoint=self.config.get("hydra_endpoint"),
-            cardano_endpoint=self.config.get("cardano_endpoint")
+            cardano_endpoint=self.config.get("cardano_endpoint"),
+            enable_llm=enable_llm
         )
         
         self.logger.debug("All agents initialized")

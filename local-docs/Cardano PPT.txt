@@ -1,0 +1,76 @@
+Team Name : NexBlock
+Team Leader : Harshita Nagesh  
+Problem Statement: Automating Real-Time Threat Detection for Cardano DeFi
+
+Sentinel Orchestrator Network (SON)
+ is a decentralized AI-agent ecosystem that delivers real-time fraud detection, trust scoring, and verified real-world data feeds for Cardano wallets, DeFi protocols, and dApps.
+Real-Time Threat DetectionSentinel Agents monitor mempool activity, analyze smart contracts, and scan token launches—flagging malicious transactions, scams, and rugpull patterns before they drain wallets.
+Decentralized Oracle ConsensusOracle Agents scrape prices, news, and market data from multiple independent sources, then apply ML-driven anomaly detection to filter manipulation and deliver manipulation-resistant, trustworthy data feeds.
+Hydra-Accelerated Multi-Agent ConsensusDetect, Verify, Compliance, and Arbitrate agents exchange evidence and resolve disputes in sub-second off-chain collaboration on Hydra, then publish verifiable results to Cardano L1 as immutable ThreatProof and FeedProof Capsules.
+Self-Sustaining Agent EconomyMasumi powers automated payments, transparent competition, reputation-based ranking, and slashing mechanisms—ensuring agents stake collateral, earn micropayments, and get penalized for false positives or malicious behavior.
+Instant Trust for Users & dAppsWallet plugins display SAFE/WARNING/DANGER ratings on addresses and transactions in real-time, while DeFi protocols consume trustless oracle feeds—unifying threat intelligence, decentralized oracles, and agentic coordination into one Hydra-native infrastructure.
+
+
+Cardano's DeFi ecosystem is rapidly scaling, but it lacks real-time threat detection and trustless oracle infrastructure. Users and protocols rely on fragmented security tools, centralized data feeds, and manual verification — leading to millions lost in exploits, oracle manipulation, and scam transactions. Events like the 2024 DeFi hacks ($1.42B stolen) showed how fragile current systems are when threat intelligence, data verification, and consensus coordination fail simultaneously.
+
+   Why SON Stands Apart as a Breakthrough Opportunity
+Existing Systems
+Sentinel Orchestrator Network (SON)
+Reactive threat detection
+Detects fraud in mempool before execution
+Centralized oracle feeds
+Decentralized multi-agent oracle consensus
+No cross-verification layer
+AI agents cross-verify evidence using ML anomaly detection
+Isolated security tools
+Unified dashboard fuses threat data, oracle feeds, and agent votes
+Manual fraud investigation
+SON auto-publishes cryptographic ThreatProof Capsules on-chain
+
+AI-Powered Threat DetectionSentinel Agents analyze contracts, wallets, mempool activity, and token launches to identify scams, rugpulls  in real time. Flags threats before they execute, protecting users from draining exploits.
+Decentralized Multi-Source Oracle FeedsOracle Agents fetch prices, weather, and market data from multiple sources, then cross-verify using ML anomaly detection. Ensures manipulation-resistant, trustworthy data for DeFi protocols.
+Hydra-Accelerated Agent ConsensusAgents share evidence, resolve conflicts, and in milliseconds using Hydra Heads. Produces reliable outputs off-chain without loading Cardano L1.
+Immutable On-Chain Truth CapsulesVerified results anchor to Cardano as ThreatProof and FeedProof Capsules—cryptographically signed attestations. dApps and wallets instantly trust the intelligence.
+Self-Improving Masumi Agent EconomyAgents earn micropayments, build reputation, and compete for accuracy through Masumi's marketplace. Economically incentivized network that gets smarter over time.
+Key Features of the Sentinel Orchestrator Network (SON)
+ Zero-Knowledge Privacy LayerZK-proofs verify sensitive data like sanctions matches without exposing raw information on-chain. Ensures regulatory compliance while maintaining user privacy.
+Cross-Chain Oracle BridgeOracle Agents retrieve data from Ethereum, Solana, and Polygon, publishing cross-chain proofs to Cardano. Enables universal data integrity across networks.
+Autonomous Agent Slashing & GovernanceAgents stake collateral; malicious agents get slashed through on-chain governance. Token-based voting removes defective agents and adjusts parameters.
+Instant Wallet Risk ScoringBrowser plugins display SAFE/WARNING/DANGER ratings by querying ThreatProof registry. Protects users before interacting with flagged addresses.
+ Automated Risk Insurance ContractsAgents classify risks and supply trigger data  to auto-configure smart contracts. Enables parametric insurance and DeFi yield protection.
+
+Process flow diagram or Use-case diagram
+
+
+Wireframes/Mock diagrams of the proposed solution
+Frontend
+N8N Workflow
+
+Architecture diagram of the proposed solution
+
+Cardano L1 (Plutus V2)Hosts all smart contracts: Agent Registry, ThreatProof Capsule, FeedProof Capsule, and Governance/Slashing contracts. Anchors cryptographic truth on-chain with token minting for reputation and payments.
+Hydra Layer-2Enables ultra-fast off-chain consensus between agents. Detect, Verify, Compliance, and Arbitrate agents share evidence, vote, and resolve disputes in milliseconds before publishing results to L1.cardano+2​
+Masumi AI Agent EconomyPowers micropayments, agent registration (NFT-based identities), reputation scoring, and marketplace competition. Agents stake collateral, earn for accuracy, and get slashed for malicious behavior.house-of-communication+2​
+PyTorch + HuggingFace TransformersRuns ML models for anomaly detection, scam pattern recognition, and oracle outlier filtering. Detect and Oracle agents use these to analyze mempool transactions and cross-verify external data feeds.
+Lucid.js + CIP-30 Wallet APIHandles transaction building, signing, and wallet integration (Nami, Eternl, Lace). Enables users to connect wallets and interact with SON's risk scoring and oracle feeds directly from browser extensions.
+IPFS + PinataStores encrypted evidence bundles off-chain (transaction logs, API responses, agent signatures). Only hashed commitments reach Cardano L1, ensuring scalability while maintaining verifiable proof trails.
+Redis Streams / NATSMessage bus for agent-to-agent communication. Agents exchange evidence, coordinate tasks, and trigger consensus votes in real-time using gRPC for low-latency internal messaging.
+FastAPI (Python) + Node.js (Express)Backend APIs for Masumi Orchestrator Service, Task Router, and Billing Logic. FastAPI handles ML-heavy agent workloads; Node.js manages lightweight orchestration and WebSocket live updates.
+Pinecone / Milvus (Vector Database)Stores embeddings for agent memory and evidence recall. Enables semantic search through past ThreatProofs and FeedProofs, helping agents learn from historical patterns.
+Prometheus + GrafanaMonitors agent performance, Hydra Head uptime, L1 settlement delays, and system health metrics. Real-time dashboards track threat detection rates, oracle feed reliability, and reputation scores.
+ZK-Proof Engine (circom / gnark)Generates privacy-preserving attestations for sensitive data (sanctions matches, compliance scores). Allows verification without exposing raw information on-chain for regulatory compliance.
+Blockfrost / KoiosCardano blockchain indexers for querying L1 state, tracking ThreatProof/FeedProof capsules, and monitoring agent registry updates. Provides REST APIs for frontend dashboards and wallet plugins.
+React + Vite + TailwindCSSFrontend for live risk dashboard, oracle feed viewer, and Masumi agent marketplace. shadcn/ui components for UI; WebSockets provide real-time threat alerts and agent status updates.
+Docker + KubernetesContainerizes agent runtimes and backend services. Helm charts deploy multi-agent clusters with auto-scaling based on task volume, ensuring high availability for fraud detection.
+OpenWeatherMap API + Cross-Chain Bridges (Wormhole)Oracle Agents fetch weather data, news, and price feeds from external APIs and blockchains (Ethereum, Solana). Cross-chain proofs published to Cardano L1 enable multi-network data integrity.okx​
+GitHub Actions (CI/CD)Automates testing, deployment, and agent updates. Pushes new agent versions, smart contract upgrades, and frontend builds to production with zero downtime.
+Tech Stack
+
+Add as per the requirements for the hackathon:
+Built entirely around Masumi’s Agent Framework: SON uses specialized Sentinel and Oracle Agents with identity, reputation scoring, and micropayment-based incentives — showcasing real multi-agent collaboration.
+Demonstrates true agentic automation: Agents independently fetch data, analyze threats, vote, resolve disagreements, and generate on-chain outputs without manual intervention.
+Leverages Cardano for verifiable trust: Final results are anchored as cryptographic Truth Capsules on L1, creating transparent, immutable proof that any dApp or wallet can rely on.
+Uses Hydra for scalable coordination: Off-chain Hydra Heads enable sub-second agent consensus, aligning with the hackathon’s emphasis on performance and next-gen Cardano infrastructure.
+Delivers a real, user-facing impact: Wallet/browser plugins and dApp integrations turn SON into a practical solution for everyday Cardano users — not just a backend concept.
+repo:https://github.com/Ashitha0409/sentinel-orchestrator-network-dashboard
+

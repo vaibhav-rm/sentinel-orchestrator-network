@@ -87,9 +87,3 @@ class OracleAgent:
         except BadSignatureError:
             print("❌ Fake signature dropped")
             return False
-
-    def sign_envelope(self, envelope):
-        message_bytes = json.dumps(envelope, separators=(',', ':')).encode()
-        signed = self.private_key.sign(message_bytes)
-        envelope["signature"] = base64.b64encode(signed.signature).decode()
-        return envelope
