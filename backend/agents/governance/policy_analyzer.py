@@ -58,16 +58,17 @@ These rules are derived from the Cardano Constitution (simplified).
         # Initialize Gemini
         if GEMINI_AVAILABLE:
             api_key = os.getenv("GOOGLE_API_KEY")
+            model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp")
             if api_key:
                 genai.configure(api_key=api_key)
                 self.model = genai.GenerativeModel(
-                    'gemini-2.0-flash-exp',
+                    model_name,
                     generation_config={
                         "response_mime_type": "application/json",
                         "temperature": 0.3
                     }
                 )
-                self.logger.info("PolicyAnalyzer initialized with Gemini")
+                self.logger.info(f"PolicyAnalyzer initialized with Gemini model: {model_name}")
             else:
                 self.model = None
                 self.logger.warning("GOOGLE_API_KEY not set")

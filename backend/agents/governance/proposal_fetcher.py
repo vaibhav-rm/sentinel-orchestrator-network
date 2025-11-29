@@ -7,8 +7,12 @@ Fetches governance proposal metadata from IPFS and Blockfrost.
 import httpx
 import json
 import logging
-from typing import Dict, Optional, List
+import os
+from typing import Dict, Optional, List, Any
 from dataclasses import dataclass
+
+from dotenv import load_dotenv
+from ..llm_config import AgentLLM
 
 @dataclass
 class ProposalMetadata:
@@ -37,8 +41,12 @@ class ProposalFetcher:
     ]
     
     def __init__(self):
+        # Load environment variables
+        load_dotenv()
+        
         self.logger = logging.getLogger("SON.ProposalFetcher")
-        self.logger.info("ProposalFetcher initialized")
+        self.llm = AgentLLM("ProposalFetcher")
+        self.logger.info("ProposalFetcher initialized with LLM capabilities")
     
     async def fetch_metadata(
         self,
@@ -93,12 +101,147 @@ class ProposalFetcher:
             error="All IPFS gateways unreachable"
         )
     
-    def generate_log(self, metadata: ProposalMetadata) -> str:
-        """Generate Matrix-style terminal log output"""
-        return f"""
-[PROPOSAL FETCHER] Metadata Retrieved
-├─ Title: {metadata.title[:50]}
-├─ Amount: {metadata.amount / 1_000_000:,.0f} ADA
-├─ IPFS Hash: {metadata.ipfs_hash[:16]}...
-└─ Status: {'✓ Success' if not metadata.error else '✗ ' + metadata.error}
+    async def analyze_proposal_content(
+        self,
+        metadata: ProposalMetadata
+    ) -> Optional[Dict[str, Any]]:
         """
+        Use LLM to analyze proposal content for quality, risks, and feasibility.
+        
+        Args:
+            metadata: The proposal metadata to analyze
+            
+        Returns:
+            Dict with analysis results or None if LLM unavailable
+        """
+        if not self.llm.is_available:
+            self.logger.debug("LLM not available for proposal analysis")
+            return None
+        
+        if metadata.error:
+            self.logger.debug("Skipping LLM analysis for failed metadata fetch")
+            return None
+        
+        try:
+            prompt = self._build_proposal_analysis_prompt(metadata)
+            analysis_text = await self.llm._generate_content(prompt)
+            
+            # Parse the analysis into structured format
+            return self._parse_proposal_analysis(analysis_text)
+            
+        except Exception as e:
+            self.logger.error(f"LLM proposal analysis failed: {e}")
+            return None
+    
+    def _build_proposal_analysis_prompt(self, metadata: ProposalMetadata) -> str:
+        """Build prompt for proposal content analysis."""
+        return f"""You are a Cardano governance expert analyzing a governance proposal.
+
+**PROPOSAL ANALYSIS REQUEST**
+
+Title: {metadata.title}
+Abstract: {metadata.abstract}
+Motivation: {metadata.motivation}
+Rationale: {metadata.rationale}
+Funding Amount: {metadata.amount / 1_000_000:,.0f} ADA
+References: {len(metadata.references)} provided
+
+**ANALYSIS REQUIREMENTS**
+
+Provide a structured analysis covering:
+
+1. **CONTENT QUALITY** (1-10 scale):
+   - Completeness of proposal details
+   - Clarity of objectives and rationale
+   - Technical specification quality
+
+2. **RISK ASSESSMENT** (LOW/MEDIUM/HIGH):
+   - Financial risks (budget justification, sustainability)
+   - Technical risks (implementation feasibility)
+   - Governance risks (centralization concerns, community impact)
+
+3. **ALIGNMENT WITH CARDANO PRINCIPLES** (1-10 scale):
+   - Decentralization principles
+   - Community governance values
+   - Technical excellence standards
+
+4. **OVERALL RECOMMENDATION** (APPROVE/CONDITIONAL/REJECT):
+   - Brief justification for the recommendation
+
+**FORMAT YOUR RESPONSE AS:**
+CONTENT_QUALITY: [score]/10 - [brief explanation]
+RISK_LEVEL: [LOW/MEDIUM/HIGH] - [key risks identified]
+ALIGNMENT_SCORE: [score]/10 - [alignment assessment]
+RECOMMENDATION: [APPROVE/CONDITIONAL/REJECT] - [justification]
+
+Keep each section concise (1-2 sentences)."""
+    
+    def _parse_proposal_analysis(self, analysis_text: str) -> Dict[str, Any]:
+        """Parse the LLM analysis response into structured data."""
+        result = {
+            "content_quality": {"score": 5, "explanation": "Analysis unavailable"},
+            "risk_assessment": {"level": "MEDIUM", "details": "Analysis unavailable"},
+            "alignment_score": {"score": 5, "explanation": "Analysis unavailable"},
+            "recommendation": {"decision": "CONDITIONAL", "justification": "Analysis unavailable"}
+        }
+        
+        try:
+            lines = analysis_text.strip().split('\n')
+            for line in lines:
+                line = line.strip()
+                if line.startswith('CONTENT_QUALITY:'):
+                    parts = line.replace('CONTENT_QUALITY:', '').strip().split(' - ', 1)
+                    if len(parts) == 2:
+                        score_part = parts[0].strip()
+                        if '/' in score_part:
+                            score = int(score_part.split('/')[0])
+                            result["content_quality"] = {"score": score, "explanation": parts[1].strip()}
+                
+                elif line.startswith('RISK_LEVEL:'):
+                    parts = line.replace('RISK_LEVEL:', '').strip().split(' - ', 1)
+                    if len(parts) == 2:
+                        level = parts[0].strip().upper()
+                        if level in ['LOW', 'MEDIUM', 'HIGH']:
+                            result["risk_assessment"] = {"level": level, "details": parts[1].strip()}
+                
+                elif line.startswith('ALIGNMENT_SCORE:'):
+                    parts = line.replace('ALIGNMENT_SCORE:', '').strip().split(' - ', 1)
+                    if len(parts) == 2:
+                        score_part = parts[0].strip()
+                        if '/' in score_part:
+                            score = int(score_part.split('/')[0])
+                            result["alignment_score"] = {"score": score, "explanation": parts[1].strip()}
+                
+                elif line.startswith('RECOMMENDATION:'):
+                    parts = line.replace('RECOMMENDATION:', '').strip().split(' - ', 1)
+                    if len(parts) == 2:
+                        decision = parts[0].strip().upper()
+                        if decision in ['APPROVE', 'CONDITIONAL', 'REJECT']:
+                            result["recommendation"] = {"decision": decision, "justification": parts[1].strip()}
+        
+        except Exception as e:
+            self.logger.error(f"Failed to parse proposal analysis: {e}")
+        
+        return result
+    
+    def generate_log(self, metadata: ProposalMetadata, analysis: Optional[Dict[str, Any]] = None) -> str:
+        """Generate Matrix-style terminal log output"""
+        log_lines = [
+            "[PROPOSAL FETCHER] Metadata Retrieved",
+            f"├─ Title: {metadata.title[:50]}",
+            f"├─ Amount: {metadata.amount / 1_000_000:,.0f} ADA",
+            f"├─ IPFS Hash: {metadata.ipfs_hash[:16]}...",
+            f"└─ Status: {'✓ Success' if not metadata.error else '✗ ' + metadata.error}"
+        ]
+        
+        if analysis:
+            log_lines.extend([
+                "",
+                "[PROPOSAL FETCHER] LLM Analysis",
+                f"├─ Content Quality: {analysis.get('content_quality', {}).get('score', 'N/A')}/10",
+                f"├─ Risk Level: {analysis.get('risk_assessment', {}).get('level', 'N/A')}",
+                f"├─ Alignment Score: {analysis.get('alignment_score', {}).get('score', 'N/A')}/10",
+                f"└─ Recommendation: {analysis.get('recommendation', {}).get('decision', 'N/A')}"
+            ])
+        
+        return "\n".join(log_lines)

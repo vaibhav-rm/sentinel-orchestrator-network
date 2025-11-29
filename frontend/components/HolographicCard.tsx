@@ -62,7 +62,7 @@ export const HolographicCard: React.FC<HolographicCardProps> = ({ children, clas
                     transform: "translateZ(75px)",
                     transformStyle: "preserve-3d",
                 }}
-                className="relative h-full"
+                className="relative h-full z-20"
             >
                 {children}
             </div>

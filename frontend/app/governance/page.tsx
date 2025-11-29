@@ -91,7 +91,7 @@ export default function GovernancePage() {
             <div className="fixed inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay pointer-events-none z-0" />
             <div className="fixed inset-0 bg-[url('/protocol-circuit.png')] bg-cover bg-center opacity-[0.05] mix-blend-screen pointer-events-none -z-5" />
 
-            <div className="max-w-7xl mx-auto space-y-8">
+            <div className="max-w-7xl mx-auto space-y-8 relative z-10">
                 {/* Header */}
                 <div className="text-center space-y-4">
                     <motion.div
@@ -111,7 +111,7 @@ export default function GovernancePage() {
                 </div>
 
                 {/* Input Section */}
-                <HolographicCard className="p-8 bg-black/40 border-white/10 backdrop-blur-xl rounded-2xl max-w-3xl mx-auto">
+                <Card className="p-8 bg-black/40 border-white/10 backdrop-blur-xl rounded-2xl max-w-3xl mx-auto relative z-20">
                     <div className="flex flex-col md:flex-row gap-4">
                         <div className="flex-1 relative group">
                             <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
@@ -122,7 +122,7 @@ export default function GovernancePage() {
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
                                 placeholder="Enter Governance Action ID or IPFS Hash..."
-                                className="w-full h-14 pl-12 pr-4 bg-black/50 border border-white/10 rounded-xl focus:outline-none focus:border-electric-cyan/50 text-white font-mono placeholder:text-white/20 transition-all relative z-50 pointer-events-auto"
+                                className="w-full h-14 pl-12 pr-4 bg-black/50 border border-white/10 rounded-xl focus:outline-none focus:border-electric-cyan/50 text-white font-mono placeholder:text-white/20 transition-all relative z-50"
                             />
                         </div>
                         <Button
@@ -133,7 +133,7 @@ export default function GovernancePage() {
                             {isAnalyzing ? "ANALYZING..." : "RUN AUDIT"}
                         </Button>
                     </div>
-                </HolographicCard>
+                </Card>
 
                 {/* Analysis Pipeline */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
