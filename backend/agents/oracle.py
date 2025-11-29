@@ -9,6 +9,18 @@ from nacl.exceptions import BadSignatureError
 from message_bus import MessageBus  # MEMBER1 builds this
 import websockets
 from fastapi import WebSocket
+from enum import Enum
+
+# =============================================================================
+# ENUMS & TYPES
+# =============================================================================
+
+class VerificationStatus(Enum):
+    """Status of external data verification"""
+    PENDING = "pending"
+    VERIFIED = "verified"
+    FAILED = "failed"
+    TIMEOUT = "timeout"
 
 # =============================================================================
 # BASE AGENT CLASS - Autonomous Microservice Template
@@ -80,69 +92,227 @@ class StakeAnalyzer(BaseAgent):
 
     async def work(self, chain_state):
         try:
-            pools = await asyncio.get_event_loop().run_in_executor(
-                None, self.blockfrost.pools
+            loop = asyncio.get_event_loop()
+
+            # 1) Get some pool IDs (e.g., first 50)
+            pool_ids = await loop.run_in_executor(
+                None, lambda: self.blockfrost.pools(count=50)
+            )  # returns list[str]
+
+            # 2) Fetch pool details for each ID
+            pools = []
+            for pid in pool_ids:
+                detail = await loop.run_in_executor(
+                    None, lambda pid=pid: self.blockfrost.pool(pid)
+                )
+                pools.append(detail)
+
+            # 3) Compute total stake and top-10 stake
+            # Handle both dict and Namespace responses
+            def get_stake(pool):
+                if isinstance(pool, dict):
+                    return float(pool.get("live_stake", pool.get("active_stake", "0")) or 0)
+                else:
+                    # Namespace object
+                    return float(getattr(pool, 'live_stake', getattr(pool, 'active_stake', 0)) or 0)
+
+            stakes = [get_stake(p) for p in pools]
+            total_stake = sum(stakes)
+
+            # sort descending
+            sorted_pools = sorted(
+                pools,
+                key=lambda p: get_stake(p),
+                reverse=True
             )
-            # Calculate minority stake (top 10 pools)
-            total_stake = sum(float(p.get("active_stake", "0")) for p in pools[:10])
-            minority_ratio = min(total_stake / 1000000000, 1.0)  # Normalize
-            self.explanation = f"Top 10 pools control {minority_ratio:.1%} of stake"
-            risk_score = 0.8 if minority_ratio > 0.3 else 0.2
+            top10 = sorted_pools[:10]
+            top10_stake = sum(get_stake(p) for p in top10)
+
+            if total_stake == 0:
+                ratio = 0.0
+            else:
+                ratio = top10_stake / total_stake
+
+            self.explanation = (
+                f"Top 10 pools control {ratio:.1%} of total sampled stake "
+                f"({int(total_stake):,} lovelace)"
+            )
+            risk_score = 0.8 if ratio > 0.3 else 0.2
             return {"risk": risk_score, "evidence": self.explanation}
+
         except Exception as e:
             return {"risk": 0.5, "evidence": f"Stake analysis error: {str(e)}"}
 
 class VoteDoctor(BaseAgent):
-    """Governance vote analysis - detects manipulation"""
+    """Governance vote analysis - current version uses epoch parameters as proxy"""
 
     async def work(self, chain_state):
         try:
-            # Get recent governance actions
-            gov_actions = await asyncio.get_event_loop().run_in_executor(
-                None, self.blockfrost.governance_actions
+            loop = asyncio.get_event_loop()
+
+            # 1) Get latest epoch protocol parameters (real endpoint)
+            params = await loop.run_in_executor(
+                None, self.blockfrost.epoch_latest_parameters
             )
-            # Simple divergence check (placeholder logic)
-            vote_count = len(gov_actions) if gov_actions else 0
-            divergence = min(vote_count / 100, 1.0)  # Normalize
-            self.explanation = f"Governance actions: {vote_count}"
-            risk_score = 0.7 if divergence > 0.4 else 0.1
-            return {"risk": risk_score, "evidence": self.explanation}
+
+            # Handle dict vs object
+            if not isinstance(params, dict):
+                params = params.__dict__
+
+            # 2) Simple sanity checks on key governance-related fields
+            decentral_param = float(params.get("decentralisation_param", 0.0))
+            min_fee_a = int(params.get("min_fee_a", 0))
+            min_fee_b = int(params.get("min_fee_b", 0))
+
+            anomalies = []
+            if not (0.0 <= decentral_param <= 1.0):
+                anomalies.append("decentralisation_param")
+            if min_fee_a <= 0 or min_fee_b <= 0:
+                anomalies.append("min_fee_a/min_fee_b")
+
+            if anomalies:
+                risk = 0.6
+                self.explanation = (
+                    "Governance parameter anomaly in: " + ", ".join(anomalies)
+                )
+            else:
+                risk = 0.3
+                self.explanation = (
+                    f"Governance epoch params OK "
+                    f"(decentralisation_param={decentral_param}, "
+                    f"min_fee_a={min_fee_a}, min_fee_b={min_fee_b})"
+                )
+
+            return {"risk": risk, "evidence": self.explanation}
+
         except Exception as e:
-            return {"risk": 0.5, "evidence": f"Governance analysis error: {str(e)}"}
+            return {
+                "risk": 0.5,
+                "evidence": f"Governance analysis error: {str(e)}",
+            }
 
 class MempoolSniffer(BaseAgent):
-    """Mempool transaction analysis - detects spam attacks"""
+    """Mempool/traffic analysis - uses latest block tx density as proxy"""
 
     async def work(self, chain_state):
         try:
-            # Simplified mempool check via Blockfrost (limited API)
-            recent_txs = await asyncio.get_event_loop().run_in_executor(
-                None, lambda: self.blockfrost.blocks_latest_transactions(limit=100)
+            loop = asyncio.get_event_loop()
+
+            # 1) Latest block info
+            latest_block = await loop.run_in_executor(
+                None, self.blockfrost.block_latest
             )
-            tx_count = len(recent_txs) if recent_txs else 0
-            spam_ratio = min(tx_count / 1000, 1.0)  # Normalize
-            self.explanation = f"Mempool transactions: {tx_count}"
-            risk_score = 0.6 if spam_ratio > 0.2 else 0.05
+            if isinstance(latest_block, dict):
+                block_hash = latest_block.get("hash")
+                size = int(latest_block.get("size", 0))
+            else:
+                block_hash = getattr(latest_block, "hash", None)
+                size = int(getattr(latest_block, "size", 0))
+
+            # 2) Get up to 100 transactions from that block
+            try:
+                block_transactions = await loop.run_in_executor(
+                    None, lambda: self.blockfrost.block_transactions(block_hash, count=100)
+                )
+                tx_hashes = [tx.get('hash') if isinstance(tx, dict) else getattr(tx, 'hash', '') for tx in block_transactions]
+            except AttributeError:
+                # Fallback: try alternative method names
+                try:
+                    block_transactions = await loop.run_in_executor(
+                        None, lambda: self.blockfrost.transactions(block_hash, count=100)
+                    )
+                    tx_hashes = [tx.get('hash') if isinstance(tx, dict) else getattr(tx, 'hash', '') for tx in block_transactions]
+                except:
+                    tx_hashes = []  # Fallback if no method works
+            tx_count = len(tx_hashes)
+
+            # 3) Heuristic: many small txs in a relatively small block => spammy
+            density = tx_count / max(size, 1)  # tx per byte
+            # Normalize: assume "high" if > 0.01 tx per byte for demo
+            spam_ratio = min(density / 0.01, 1.0)
+
+            self.explanation = (
+                f"Latest block {block_hash[:8]} has {tx_count} txs, size {size} bytes "
+                f"(density={density:.5f} tx/byte)"
+            )
+            risk_score = 0.6 if spam_ratio > 0.5 else 0.3
+
             return {"risk": risk_score, "evidence": self.explanation}
+
         except Exception as e:
-            return {"risk": 0.5, "evidence": f"Mempool analysis error: {str(e)}"}
+            return {
+                "risk": 0.5,
+                "evidence": f"Mempool analysis error: {str(e)}",
+            }
 
 class ReplayDetector(BaseAgent):
-    """Transaction replay detection"""
+    """Transaction replay detection - checks for duplicate tx hashes in last N blocks"""
 
     async def work(self, chain_state):
         try:
-            # Check for duplicate transactions (simplified)
-            recent_txs = await asyncio.get_event_loop().run_in_executor(
-                None, lambda: self.blockfrost.blocks_latest_transactions(limit=50)
+            loop = asyncio.get_event_loop()
+
+            # 1) Start from latest block
+            latest_block = await loop.run_in_executor(
+                None, self.blockfrost.block_latest
             )
-            # Check for nonce reuse (placeholder)
-            replayed = 0  # In real implementation, check tx signatures
-            self.explanation = f"Potential replays detected: {replayed}"
-            risk_score = 0.95 if replayed > 0 else 0.0
+            if isinstance(latest_block, dict):
+                current_hash = latest_block.get("hash")
+            else:
+                current_hash = getattr(latest_block, "hash", None)
+
+            hashes_seen = set()
+            duplicates = 0
+            blocks_scanned = 0
+
+            # 2) Walk back a few blocks
+            for _ in range(5):  # last 5 blocks
+                if not current_hash:
+                    break
+
+                # Get transaction hashes from this block (API limit is 100)
+                try:
+                    block_transactions = await loop.run_in_executor(
+                        None, lambda h=current_hash: self.blockfrost.block_transactions(h, count=100)
+                    )
+                    tx_hashes = [tx.get('hash') if isinstance(tx, dict) else getattr(tx, 'hash', '') for tx in block_transactions]
+                except AttributeError:
+                    # Fallback: try alternative method names
+                    try:
+                        block_transactions = await loop.run_in_executor(
+                            None, lambda h=current_hash: self.blockfrost.transactions(h, count=100)
+                        )
+                        tx_hashes = [tx.get('hash') if isinstance(tx, dict) else getattr(tx, 'hash', '') for tx in block_transactions]
+                    except:
+                        tx_hashes = []  # Fallback if no method works
+                for h in tx_hashes:
+                    if h in hashes_seen:
+                        duplicates += 1
+                    else:
+                        hashes_seen.add(h)
+
+                blocks_scanned += 1
+
+                # Get previous block hash
+                block_detail = await loop.run_in_executor(
+                    None, lambda h=current_hash: self.blockfrost.block(h)
+                )
+                if isinstance(block_detail, dict):
+                    current_hash = block_detail.get("previous_block")
+                else:
+                    current_hash = getattr(block_detail, "previous_block", None)
+
+            self.explanation = (
+                f"Scanned {blocks_scanned} blocks, duplicate tx hashes: {duplicates}"
+            )
+            risk_score = 0.9 if duplicates > 0 else 0.3
             return {"risk": risk_score, "evidence": self.explanation}
+
         except Exception as e:
-            return {"risk": 0.5, "evidence": f"Replay detection error: {str(e)}"}
+            return {
+                "risk": 0.5,
+                "evidence": f"Replay detection error: {str(e)}",
+            }
 
 # =============================================================================
 # ORACLE COORDINATOR - Hires Swarm + Bayesian Fusion
