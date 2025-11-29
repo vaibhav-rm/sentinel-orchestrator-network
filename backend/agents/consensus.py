@@ -56,9 +56,15 @@ class ConsensusAgent(BaseAgent):
     This agent:
     1. Collects votes from all previous agents (A/B/C/D)
     2. Calculates weighted final score
-    3. Submits to Hydra for L2 consensus (PLACEHOLDER)
-    4. Produces CIP-25 compliant ThreatProof Capsule
-    5. Records to Cardano L1 (PLACEHOLDER)
+    3. Uses LLM (Gemini) for consensus explanation when available
+    4. Submits to Hydra for L2 consensus (PLACEHOLDER)
+    5. Produces CIP-25 compliant ThreatProof Capsule
+    6. Records to Cardano L1 (PLACEHOLDER)
+    
+    LLM Enhancement:
+    - When LLM is available, generates human-readable verdict explanations
+    - Summarizes how agents reached consensus
+    - Falls back to template-based output if LLM unavailable
     
     Performance: Must complete in < 5 seconds (including Hydra)
     """
@@ -66,7 +72,8 @@ class ConsensusAgent(BaseAgent):
     def __init__(
         self,
         hydra_endpoint: Optional[str] = None,
-        cardano_endpoint: Optional[str] = None
+        cardano_endpoint: Optional[str] = None,
+        enable_llm: bool = True
     ):
         """
         Initialize the Consensus Agent.
@@ -74,8 +81,9 @@ class ConsensusAgent(BaseAgent):
         Args:
             hydra_endpoint: Hydra node WebSocket endpoint (uses mock if None)
             cardano_endpoint: Cardano node endpoint for L1 (uses mock if None)
+            enable_llm: Whether to enable LLM-enhanced consensus explanations
         """
-        super().__init__(agent_name="consensus", role="consensus_mediator")
+        super().__init__(agent_name="consensus", role="consensus_mediator", enable_llm=enable_llm)
         
         # Blockchain endpoints (PLACEHOLDER for production)
         self.hydra_endpoint = hydra_endpoint or "ws://localhost:4001"
@@ -144,10 +152,34 @@ class ConsensusAgent(BaseAgent):
         # Generate capsule ID
         capsule_id = self._generate_capsule_id(policy_id)
         
+        # Step 6: Use LLM for consensus explanation (if available)
+        llm_summary = None
+        llm_explanation = None
+        if self.has_llm:
+            try:
+                llm_summary = await self.llm.generate_consensus_summary(
+                    vote_breakdown=vote_breakdown,
+                    final_verdict=final_verdict,
+                    final_score=final_score
+                )
+                
+                # Also generate user-friendly explanation
+                all_findings = []
+                sentinel_findings = input_data.get("sentinel_output", {}).get("findings", [])
+                llm_explanation = await self.llm.explain_verdict(
+                    verdict=final_verdict,
+                    score=final_score,
+                    findings=sentinel_findings,
+                    vote_breakdown=vote_breakdown
+                )
+                self.logger.debug("LLM consensus summary generated successfully")
+            except Exception as e:
+                self.logger.warning(f"LLM consensus summary failed: {e}")
+        
         self.log_complete(Vote(final_verdict), final_score)
         
         # Return final structured output
-        return {
+        result = {
             "agent": "consensus",
             "policy_id": policy_id,
             "final_verdict": final_verdict,
@@ -159,8 +191,17 @@ class ConsensusAgent(BaseAgent):
             "hydra_confirmed": hydra_result.get("confirmed", False),
             "l1_tx_id": l1_result.get("tx_id"),
             "l1_confirmed": l1_result.get("confirmed", False),
-            "timestamp": self.get_timestamp()
+            "timestamp": self.get_timestamp(),
+            "llm_enabled": self.has_llm
         }
+        
+        # Add LLM outputs if available
+        if llm_summary:
+            result["llm_consensus_summary"] = llm_summary
+        if llm_explanation:
+            result["llm_verdict_explanation"] = llm_explanation
+        
+        return result
     
     # -------------------------------------------------------------------------
     # VOTE AGGREGATION

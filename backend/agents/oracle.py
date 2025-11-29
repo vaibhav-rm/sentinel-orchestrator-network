@@ -58,8 +58,14 @@ class OracleAgent(BaseAgent):
     1. Queries DEX liquidity (WingRiders/Minswap - PLACEHOLDER)
     2. Checks token holder distribution
     3. Analyzes trading volume patterns
-    4. Cross-verifies Sentinel's risk assessment
-    5. Casts independent vote with confidence score
+    4. Uses LLM (Gemini) for intelligent cross-verification when available
+    5. Cross-verifies Sentinel's risk assessment
+    6. Casts independent vote with confidence score
+    
+    LLM Enhancement:
+    - When LLM is available, provides nuanced verification analysis
+    - Identifies discrepancies between findings and market data
+    - Falls back to rule-based verification if LLM unavailable
     
     Performance: Must complete in < 3 seconds
     """
@@ -67,7 +73,8 @@ class OracleAgent(BaseAgent):
     def __init__(
         self,
         wingriders_api: Optional[str] = None,
-        minswap_api: Optional[str] = None
+        minswap_api: Optional[str] = None,
+        enable_llm: bool = True
     ):
         """
         Initialize the Oracle Agent.
@@ -75,8 +82,9 @@ class OracleAgent(BaseAgent):
         Args:
             wingriders_api: WingRiders API endpoint (optional, uses mock if None)
             minswap_api: Minswap API endpoint (optional, uses mock if None)
+            enable_llm: Whether to enable LLM-enhanced verification
         """
-        super().__init__(agent_name="oracle", role="external_data_verifier")
+        super().__init__(agent_name="oracle", role="external_data_verifier", enable_llm=enable_llm)
         
         # DEX API configuration (PLACEHOLDER for production)
         self.wingriders_api = wingriders_api or "https://api.wingriders.com"
@@ -138,10 +146,27 @@ class OracleAgent(BaseAgent):
         # Calculate confidence based on data quality
         confidence = self._calculate_confidence(liquidity_data, holder_data)
         
+        # Step 7: Use LLM for enhanced cross-verification (if available)
+        llm_verification = None
+        if self.has_llm:
+            try:
+                llm_verification = await self.llm.cross_verify_analysis(
+                    sentinel_findings=sentinel_output,
+                    external_data={
+                        "total_liquidity_ada": liquidity_data.get("total_liquidity_ada", 0),
+                        "total_holders": holder_data.get("total_holders", 0),
+                        "top10_percentage": holder_data.get("top10_percentage", 0),
+                        "volume_24h": trading_data.get("volume_24h", 0)
+                    }
+                )
+                self.logger.debug("LLM cross-verification completed successfully")
+            except Exception as e:
+                self.logger.warning(f"LLM cross-verification failed: {e}")
+        
         self.log_complete(vote, risk_score)
         
         # Return structured output for Compliance Agent
-        return {
+        result = {
             "agent": "oracle",
             "policy_id": policy_id,
             "liquidity_score": liquidity_score,
@@ -157,8 +182,16 @@ class OracleAgent(BaseAgent):
             "vote": vote.value,
             "confidence": confidence,
             "risk_score": risk_score,
-            "timestamp": self.get_timestamp()
+            "timestamp": self.get_timestamp(),
+            "llm_enabled": self.has_llm
         }
+        
+        # Add LLM verification if available
+        if llm_verification:
+            result["llm_verification"] = llm_verification.get("llm_verification")
+            result["llm_model"] = llm_verification.get("model_used")
+        
+        return result
     
     # -------------------------------------------------------------------------
     # DEX LIQUIDITY METHODS
