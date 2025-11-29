@@ -6,6 +6,10 @@ Sentinel Orchestrator Network (SON) - Base Agent Class
 This module provides the base class that all SON agents inherit from.
 It defines common functionality like logging, timing, and output formatting.
 
+Simplified Architecture (2 Agents):
+- Sentinel: Orchestrator, compliance checker, verdict issuer
+- Oracle: Blockchain verifier, fork detection
+
 LLM Integration:
 - Uses Gemini (gemini-2.5-flash) as the AI reasoning engine
 - LLM is optional - agents fall back to rule-based logic if unavailable
@@ -52,8 +56,8 @@ class BaseAgent(ABC):
     """
     Abstract base class for all SON agents.
     
-    Every agent (Sentinel, Oracle, Compliance, Consensus) inherits from this
-    class to get common functionality like:
+    Every agent (Sentinel, Oracle) inherits from this class to get 
+    common functionality like:
     - Logging with agent name prefix
     - Timestamp generation (ISO 8601)
     - Hash generation for evidence

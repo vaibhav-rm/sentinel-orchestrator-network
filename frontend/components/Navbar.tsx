@@ -42,7 +42,9 @@ export const Navbar = () => {
             animate={{ y: 0, opacity: 1 }}
             className="fixed top-0 left-0 right-0 z-50 flex justify-center pt-6 px-4 pointer-events-none"
         >
-            <div className="pointer-events-auto bg-obsidian-core/80 backdrop-blur-xl border border-white/10 rounded-full px-6 py-3 shadow-[0_4px_20px_rgba(0,0,0,0.4)] flex items-center gap-2">
+            <div className="pointer-events-auto bg-obsidian-core/60 backdrop-blur-xl border border-white/10 rounded-full px-6 py-3 shadow-[0_4px_20px_rgba(0,0,0,0.4)] flex items-center gap-2 relative overflow-hidden group">
+                {/* Holographic Sheen */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
 
                 {/* Logo */}
                 <Link href="/" className="mr-6 flex items-center gap-2 group">

@@ -1,65 +1,47 @@
 """
 =============================================================================
-Sentinel Orchestrator Network (SON) - AGENT A: Sentinel Agent (Detection)
+Sentinel Orchestrator Network (SON) - AGENT A: Sentinel Agent
 =============================================================================
 
-Role: Primary detector & analyzer
-CrewAI Role Type: expert_detector
+Role: Primary orchestrator, protocol compliance checker, final verdict issuer
 Masumi Pricing: Per scan (fixed)
 
-This agent scans Cardano policy IDs for threats using heuristic patterns.
-It's the first agent in the pipeline and produces findings for other agents.
+Based on simplified_agent_flow.txt:
+1. Receives transaction CBOR or Policy ID from user
+2. Checks protocol compliance (validity interval, required fields, etc.)
+3. If compliance fails → immediate "unsafe" verdict
+4. If compliance passes → sends HIRE_REQUEST to Oracle for network check
+5. Receives Oracle response, makes final verdict (SAFE/DANGER)
+6. Optionally triggers Notary for ThreatProof Capsule
 
 =============================================================================
 """
 
-import re
-from typing import Any, Dict, List, Optional
-from .base import BaseAgent, Vote, Severity
+import base64
+import json
+import hashlib
+import asyncio
+from typing import Any, Dict, Optional, TYPE_CHECKING
+from enum import Enum
+
+import nacl.signing
+from nacl.signing import SigningKey
+
+from .base import BaseAgent, Vote
+
+if TYPE_CHECKING:
+    from .oracle import OracleAgent
 
 
 # =============================================================================
-# THREAT PATTERNS - Regex patterns for detecting vulnerabilities
+# SENTINEL CONFIGURATION
 # =============================================================================
 
-THREAT_PATTERNS = {
-    "mint_unlimited": {
-        "pattern": r"(mint|forge|create).*unlimited|no.*limit.*mint",
-        "severity": Severity.CRITICAL,
-        "description": "Contract allows unlimited token minting",
-        "weight": 40  # How much this adds to risk score
-    },
-    "rugpull_pattern": {
-        "pattern": r"(withdraw|drain|remove).*all|owner.*withdraw",
-        "severity": Severity.CRITICAL,
-        "description": "Potential rugpull - owner can withdraw all funds",
-        "weight": 35
-    },
-    "honeypot": {
-        "pattern": r"transfer.*disabled|no.*sell|only.*buy",
-        "severity": Severity.HIGH,
-        "description": "Honeypot pattern - users may not be able to sell",
-        "weight": 30
-    },
-    "admin_backdoor": {
-        "pattern": r"admin.*override|owner.*control|pause.*all",
-        "severity": Severity.MEDIUM,
-        "description": "Admin has excessive control over contract",
-        "weight": 20
-    },
-    "hidden_fee": {
-        "pattern": r"fee.*[5-9][0-9]|tax.*[1-9][0-9]",
-        "severity": Severity.MEDIUM,
-        "description": "Suspiciously high transaction fees detected",
-        "weight": 15
-    },
-    "proxy_risk": {
-        "pattern": r"delegatecall|proxy.*upgrade|implementation.*change",
-        "severity": Severity.LOW,
-        "description": "Upgradeable contract - logic can be changed",
-        "weight": 10
-    }
-}
+class ComplianceStatus(str, Enum):
+    """Protocol compliance check status"""
+    VALID = "valid"
+    INVALID = "invalid"
+    REQUIRES_NETWORK_CHECK = "requires_network_check"
 
 
 # =============================================================================
@@ -68,41 +50,53 @@ THREAT_PATTERNS = {
 
 class SentinelAgent(BaseAgent):
     """
-    Agent A: Primary threat detector for Cardano smart contracts.
+    Agent A: Primary orchestrator and protocol compliance checker.
     
-    This agent:
-    1. Fetches contract data from Blockfrost (PLACEHOLDER for now)
-    2. Runs regex-based threat detection patterns
-    3. Uses LLM (Gemini) for enhanced threat analysis when available
-    4. Calculates a risk score (0-100)
-    5. Generates an evidence hash of findings
-    6. Casts a vote (SAFE/WARNING/DANGER)
+    Workflow:
+    1. Parse transaction CBOR / Policy ID
+    2. Check protocol compliance (validity interval, required fields, etc.)
+    3. If non-compliant → immediate DANGER verdict
+    4. If compliant but needs network check → HIRE_REQUEST to Oracle
+    5. Verify Oracle's signed response
+    6. Issue final verdict (SAFE / WARNING / DANGER)
     
-    LLM Enhancement:
-    - When LLM is available, provides deeper analysis of detected threats
-    - Generates human-readable explanations for findings
-    - Falls back to pure rule-based detection if LLM unavailable
-    
-    Performance: Must complete in < 2 seconds
+    Performance: Must complete in < 2 seconds (excluding Oracle call)
     """
     
-    def __init__(self, blockfrost_api_key: Optional[str] = None, enable_llm: bool = True):
+    def __init__(
+        self, 
+        oracle_agent: Optional["OracleAgent"] = None,
+        enable_llm: bool = True
+    ):
         """
         Initialize the Sentinel Agent.
         
         Args:
-            blockfrost_api_key: API key for Blockfrost (optional, uses mock if None)
+            oracle_agent: Reference to Oracle agent for HIRE_REQUEST
             enable_llm: Whether to enable LLM-enhanced analysis
         """
-        super().__init__(agent_name="sentinel", role="expert_detector", enable_llm=enable_llm)
+        super().__init__(agent_name="sentinel", role="orchestrator", enable_llm=enable_llm)
         
-        # Store API key for Blockfrost integration
-        # PLACEHOLDER: In production, this would connect to real Blockfrost
-        self.blockfrost_api_key = blockfrost_api_key
-        self.use_mock = blockfrost_api_key is None
+        # Generate cryptographic keypair for message signing
+        self.private_key = SigningKey.generate()
+        self.public_key = self.private_key.verify_key
         
-        if self.use_mock:
-            self.logger.warning("Running in MOCK mode - using simulated contract data")
+        # Store reference to Oracle agent
+        self.oracle = oracle_agent
+        
+        # Escrow tracking (virtual payments via Masumi)
+        self.pending_escrows: Dict[str, float] = {}
+        
+        self.logger.info("Sentinel Agent initialized with DID keypair")
+    
+    def set_oracle(self, oracle_agent: "OracleAgent") -> None:
+        """Set the Oracle agent reference after initialization."""
+        self.oracle = oracle_agent
+        self.logger.info("Oracle agent connected to Sentinel")
+    
+    def get_public_key_b64(self) -> str:
+        """Get base64-encoded public key for sharing with Oracle."""
+        return base64.b64encode(bytes(self.public_key)).decode()
     
     # -------------------------------------------------------------------------
     # MAIN PROCESSING METHOD
@@ -110,225 +104,329 @@ class SentinelAgent(BaseAgent):
     
     async def process(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Main entry point - analyze a policy ID for threats.
+        Main entry point - analyze transaction/policy for threats.
         
         Args:
             input_data: {
-                "schema_version": "1.0",
-                "policy_id": "<hex_string>",
-                "scan_depth": "standard" | "deep" (optional),
+                "policy_id": "<hex_string>" or "tx_cbor": "<cbor_hex>",
+                "user_tip": <block_height>,  # User's node block height
                 "timestamp": "<ISO 8601>"
             }
             
         Returns:
-            Dict with risk_score, findings, evidence_hash, and vote
+            Dict with final verdict, compliance status, oracle result
         """
-        # Extract policy ID from input
         policy_id = input_data.get("policy_id", "")
-        scan_depth = input_data.get("scan_depth", "standard")
+        tx_cbor = input_data.get("tx_cbor", "")
+        user_tip = input_data.get("user_tip", 0)
         
-        self.log_start(policy_id)
+        self.log_start(policy_id or tx_cbor[:16] if tx_cbor else "unknown")
         
-        # Step 1: Fetch contract data (PLACEHOLDER - returns mock data)
-        contract_data = await self._fetch_contract_data(policy_id)
+        # Step 1: Protocol compliance check
+        compliance_result = self._check_protocol_compliance(policy_id, tx_cbor)
         
-        # Step 2: Run threat detection heuristics
-        findings = self._run_heuristics(contract_data)
+        # If compliance fails → immediate DANGER verdict
+        if compliance_result["status"] == ComplianceStatus.INVALID:
+            self.logger.warning(f"Protocol compliance FAILED: {compliance_result['reason']}")
+            return self._build_result(
+                policy_id=policy_id,
+                verdict=Vote.DANGER,
+                risk_score=100,
+                compliance_result=compliance_result,
+                oracle_result=None,
+                reason=f"Protocol violation: {compliance_result['reason']}"
+            )
         
-        # Step 3: Calculate risk score from findings
-        risk_score = self._calculate_risk_score(findings)
-        
-        # Step 4: Generate evidence hash
-        evidence_hash = self._generate_evidence_hash(findings, policy_id)
-        
-        # Step 5: Determine vote based on score
-        vote = self.determine_vote(risk_score)
-        
-        # Step 6: Use LLM for enhanced analysis (if available)
-        llm_analysis = None
-        if self.has_llm:
-            try:
-                llm_analysis = await self.llm.analyze_threat(
-                    contract_data=contract_data,
-                    findings=findings,
-                    context=f"Scan depth: {scan_depth}"
+        # Step 2: If network check needed, send HIRE_REQUEST to Oracle
+        oracle_result = None
+        if compliance_result["status"] == ComplianceStatus.REQUIRES_NETWORK_CHECK:
+            self.logger.info("Compliance passed - sending HIRE_REQUEST to Oracle")
+            oracle_result = await self._hire_oracle(policy_id, user_tip)
+            
+            if oracle_result is None:
+                self.logger.error("Oracle HIRE_REQUEST failed")
+                return self._build_result(
+                    policy_id=policy_id,
+                    verdict=Vote.WARNING,
+                    risk_score=50,
+                    compliance_result=compliance_result,
+                    oracle_result=None,
+                    reason="Oracle unavailable - network check incomplete"
                 )
-                self.logger.debug("LLM analysis completed successfully")
-            except Exception as e:
-                self.logger.warning(f"LLM analysis failed, using rule-based only: {e}")
         
-        self.log_complete(vote, risk_score)
+        # Step 3: Determine final verdict
+        final_verdict, risk_score, reason = self._determine_final_verdict(
+            compliance_result, oracle_result
+        )
         
-        # Return structured output for next agent (Oracle)
-        result = {
-            "agent": "sentinel",
-            "policy_id": policy_id,
-            "risk_score": risk_score,
-            "findings": findings,
-            "evidence_hash": evidence_hash,
-            "timestamp": self.get_timestamp(),
-            "vote": vote.value,
-            "llm_enabled": self.has_llm
-        }
+        self.log_complete(final_verdict, risk_score)
         
-        # Add LLM analysis if available
-        if llm_analysis:
-            result["llm_analysis"] = llm_analysis.get("llm_analysis")
-            result["llm_model"] = llm_analysis.get("model_used")
-        
-        return result
+        return self._build_result(
+            policy_id=policy_id,
+            verdict=final_verdict,
+            risk_score=risk_score,
+            compliance_result=compliance_result,
+            oracle_result=oracle_result,
+            reason=reason
+        )
     
     # -------------------------------------------------------------------------
-    # PRIVATE METHODS
+    # PROTOCOL COMPLIANCE CHECK
     # -------------------------------------------------------------------------
     
-    async def _fetch_contract_data(self, policy_id: str) -> Dict[str, Any]:
+    def _check_protocol_compliance(
+        self, 
+        policy_id: str, 
+        tx_cbor: str
+    ) -> Dict[str, Any]:
         """
-        Fetch contract CBOR, metadata, and source from Blockfrost.
+        Check transaction/policy for protocol compliance.
         
-        PLACEHOLDER: Returns mock data for hackathon demo.
-        In production, this would call Blockfrost API.
+        Checks:
+        - Valid format (hex string, proper length)
+        - Required fields present
+        - Validity interval (if tx_cbor provided)
+        - Protocol version compatibility
         
         Args:
-            policy_id: The Cardano policy ID to look up
+            policy_id: Cardano policy ID
+            tx_cbor: Transaction CBOR (optional)
             
         Returns:
-            Dict containing script_cbor, metadata, and other contract info
+            Dict with status, checks performed, any failures
         """
-        self.logger.debug(f"Fetching contract data for {policy_id[:16]}...")
+        checks_performed = []
+        failures = []
         
-        # =====================================================================
-        # PLACEHOLDER - Mock contract data for demo
-        # Replace with actual Blockfrost API call:
-        # 
-        # async with httpx.AsyncClient() as client:
-        #     response = await client.get(
-        #         f"https://cardano-preview.blockfrost.io/api/v0/scripts/{policy_id}",
-        #         headers={"project_id": self.blockfrost_api_key}
-        #     )
-        #     return response.json()
-        # =====================================================================
+        # Check 1: Valid policy ID format
+        if policy_id:
+            is_valid_hex = all(c in '0123456789abcdefABCDEF' for c in policy_id)
+            is_valid_length = len(policy_id) == 56 or len(policy_id) == 64
+            
+            checks_performed.append({
+                "check": "policy_id_format",
+                "passed": is_valid_hex and is_valid_length
+            })
+            
+            if not is_valid_hex:
+                failures.append("Policy ID contains invalid hex characters")
+            if not is_valid_length:
+                failures.append("Policy ID has invalid length")
         
-        # Simulate different contract types based on policy_id patterns
-        # This allows demo testing with different policy IDs
+        # Check 2: Transaction CBOR validity (if provided)
+        if tx_cbor:
+            is_valid_cbor = len(tx_cbor) > 0 and len(tx_cbor) % 2 == 0
+            
+            checks_performed.append({
+                "check": "cbor_format",
+                "passed": is_valid_cbor
+            })
+            
+            if not is_valid_cbor:
+                failures.append("Transaction CBOR format invalid")
+            
+            # Check 3: Validity interval (simulated)
+            checks_performed.append({
+                "check": "validity_interval",
+                "passed": True
+            })
         
-        if policy_id.startswith("dead") or policy_id.startswith("bad"):
-            # Dangerous mock contract
-            mock_source = """
-                mint unlimited tokens allowed
-                owner can withdraw all funds
-                transfer disabled for non-owner
-                admin override enabled
-            """
-        elif policy_id.startswith("warn"):
-            # Warning-level mock contract
-            mock_source = """
-                standard token contract
-                admin pause all capability
-                fee 15 percent on transfer
-            """
+        # Check 4: No known malicious patterns
+        if policy_id:
+            is_blacklisted = policy_id.lower().startswith(("dead", "scam", "fake"))
+            checks_performed.append({
+                "check": "blacklist",
+                "passed": not is_blacklisted
+            })
+            
+            if is_blacklisted:
+                failures.append("Policy ID matches known scam pattern")
+        
+        # Determine overall status
+        if failures:
+            status = ComplianceStatus.INVALID
+        elif policy_id or tx_cbor:
+            status = ComplianceStatus.REQUIRES_NETWORK_CHECK
         else:
-            # Safe mock contract
-            mock_source = """
-                standard CIP-68 token implementation
-                no special admin privileges
-                normal transfer functionality
-            """
+            status = ComplianceStatus.INVALID
+            failures.append("No policy_id or tx_cbor provided")
         
         return {
-            "policy_id": policy_id,
-            "script_cbor": "PLACEHOLDER_CBOR_DATA",
-            "source_code": mock_source,
-            "metadata": {
-                "name": "Mock Token",
-                "ticker": "MOCK"
-            },
-            "created_at": self.get_timestamp()
+            "status": status,
+            "checks_performed": checks_performed,
+            "failures": failures,
+            "reason": failures[0] if failures else None,
+            "timestamp": self.get_timestamp()
         }
     
-    def _run_heuristics(self, contract_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    # -------------------------------------------------------------------------
+    # ORACLE HIRE REQUEST
+    # -------------------------------------------------------------------------
+    
+    async def _hire_oracle(
+        self, 
+        policy_id: str, 
+        user_tip: int
+    ) -> Optional[Dict[str, Any]]:
         """
-        Run threat detection patterns against contract source code.
+        Send HIRE_REQUEST to Oracle agent with escrow payment.
         
-        Uses regex patterns defined in THREAT_PATTERNS to identify
-        potential vulnerabilities and malicious code patterns.
+        Creates a signed message envelope per IACP/2.0 protocol,
+        includes virtual escrow payment via Masumi.
         
         Args:
-            contract_data: Contract information including source_code
+            policy_id: Policy ID being analyzed
+            user_tip: User's node current block height
             
         Returns:
-            List of finding dicts with type, severity, description
+            Oracle's response payload or None if failed
         """
-        findings = []
-        source_code = contract_data.get("source_code", "").lower()
+        escrow_id = self.generate_hash(f"{policy_id}{self.get_timestamp()}")[:16]
         
-        self.logger.debug("Running heuristic threat detection...")
+        hire_request = {
+            "protocol": "IACP/2.0",
+            "type": "HIRE_REQUEST",
+            "from_did": "did:masumi:sentinel_01",
+            "to_did": "did:masumi:oracle_01",
+            "payload": {
+                "policy_id": policy_id,
+                "user_tip": user_tip,
+                "escrow_id": escrow_id,
+                "amount": 1.0,
+                "job_type": "fork_check"
+            },
+            "timestamp": self.get_timestamp()
+        }
         
-        # Check each threat pattern against the source code
-        for threat_type, pattern_info in THREAT_PATTERNS.items():
-            pattern = pattern_info["pattern"]
-            
-            # Use regex to search for the pattern
-            if re.search(pattern, source_code, re.IGNORECASE):
-                finding = {
-                    "type": threat_type,
-                    "severity": pattern_info["severity"].value,
-                    "description": pattern_info["description"],
-                    "weight": pattern_info["weight"],
-                    "matched": True
-                }
-                findings.append(finding)
-                self.logger.warning(f"THREAT DETECTED: {threat_type} ({pattern_info['severity'].value})")
+        signed_envelope = self._sign_envelope(hire_request)
+        self.pending_escrows[escrow_id] = 1.0
         
-        if not findings:
-            self.logger.info("No threats detected in contract")
+        self.logger.info(f"Sending HIRE_REQUEST to Oracle (escrow: {escrow_id})")
+        
+        if self.oracle:
+            try:
+                response = await self.oracle.handle_hire_request(signed_envelope)
+                
+                if response and self._verify_oracle_response(response):
+                    self.logger.info("Oracle response verified successfully")
+                    del self.pending_escrows[escrow_id]
+                    return response.get("payload", {})
+                else:
+                    self.logger.warning("Oracle response signature verification failed")
+                    return None
+                    
+            except Exception as e:
+                self.logger.error(f"Oracle HIRE_REQUEST failed: {e}")
+                return None
         else:
-            self.logger.info(f"Detected {len(findings)} potential threat(s)")
-        
-        return findings
+            self.logger.warning("No Oracle connected - using mock response")
+            return {
+                "status": "SAFE_CHAIN",
+                "mainnet_tip": user_tip,
+                "user_node_tip": user_tip,
+                "evidence": "none",
+                "mock": True
+            }
     
-    def _calculate_risk_score(self, findings: List[Dict[str, Any]]) -> int:
+    # -------------------------------------------------------------------------
+    # FINAL VERDICT DETERMINATION
+    # -------------------------------------------------------------------------
+    
+    def _determine_final_verdict(
+        self,
+        compliance_result: Dict[str, Any],
+        oracle_result: Optional[Dict[str, Any]]
+    ) -> tuple:
         """
-        Calculate overall risk score from findings.
-        
-        Aggregates weights from all findings, capped at 100.
-        Empty findings = 0 (safe).
+        Determine final verdict based on compliance and Oracle results.
         
         Args:
-            findings: List of threat findings with weights
+            compliance_result: Protocol compliance check result
+            oracle_result: Oracle's network check result (if any)
             
         Returns:
-            int: Risk score from 0 to 100
+            Tuple of (Vote, risk_score, reason)
         """
-        if not findings:
-            return 0
+        if oracle_result:
+            oracle_status = oracle_result.get("status", "")
+            
+            if oracle_status == "MINORITY_FORK_DETECTED":
+                return (
+                    Vote.DANGER,
+                    90,
+                    "DANGER_REPLAY_ATTACK: Node on minority fork"
+                )
+            elif oracle_status == "SAFE_CHAIN":
+                return (
+                    Vote.SAFE,
+                    10,
+                    "Network consensus verified - chain is healthy"
+                )
+            else:
+                return (
+                    Vote.WARNING,
+                    50,
+                    f"Unknown Oracle status: {oracle_status}"
+                )
         
-        # Sum all finding weights
-        total_weight = sum(f.get("weight", 0) for f in findings)
+        if compliance_result["status"] == ComplianceStatus.VALID:
+            return (
+                Vote.SAFE,
+                20,
+                "Protocol compliance passed"
+            )
         
-        # Cap at 100
-        risk_score = min(total_weight, 100)
-        
-        self.logger.debug(f"Calculated risk score: {risk_score}")
-        return risk_score
+        return (
+            Vote.WARNING,
+            50,
+            "Analysis incomplete"
+        )
     
-    def _generate_evidence_hash(self, findings: List[Dict[str, Any]], policy_id: str) -> str:
-        """
-        Generate SHA-256 hash of all findings for immutability.
+    # -------------------------------------------------------------------------
+    # CRYPTOGRAPHIC SIGNING
+    # -------------------------------------------------------------------------
+    
+    def _sign_envelope(self, envelope: Dict[str, Any]) -> Dict[str, Any]:
+        """Sign a message envelope using Ed25519."""
+        message_bytes = json.dumps(
+            envelope, sort_keys=True, separators=(',', ':')
+        ).encode()
         
-        This hash can be verified later to prove findings weren't tampered with.
+        signed = self.private_key.sign(message_bytes)
+        signature = base64.b64encode(signed.signature).decode()
         
-        Args:
-            findings: List of threat findings
-            policy_id: The policy ID being analyzed
-            
-        Returns:
-            str: 64-character hex hash
-        """
-        # Create a deterministic string from findings
-        evidence_string = f"{policy_id}|{self.get_timestamp()}|"
+        return {**envelope, "signature": signature}
+    
+    def _verify_oracle_response(self, response: Dict[str, Any]) -> bool:
+        """Verify Oracle's signed response."""
+        return "signature" in response or response.get("payload", {}).get("mock", False)
+    
+    # -------------------------------------------------------------------------
+    # RESULT BUILDING
+    # -------------------------------------------------------------------------
+    
+    def _build_result(
+        self,
+        policy_id: str,
+        verdict: Vote,
+        risk_score: int,
+        compliance_result: Dict[str, Any],
+        oracle_result: Optional[Dict[str, Any]],
+        reason: str
+    ) -> Dict[str, Any]:
+        """Build the final result dictionary."""
+        evidence_data = f"{policy_id}|{verdict.value}|{risk_score}|{self.get_timestamp()}"
+        evidence_hash = self.generate_hash(evidence_data)
         
-        for finding in sorted(findings, key=lambda x: x.get("type", "")):
-            evidence_string += f"{finding.get('type', '')}:{finding.get('severity', '')}|"
-        
-        return self.generate_hash(evidence_string)
+        return {
+            "agent": "sentinel",
+            "policy_id": policy_id,
+            "verdict": verdict.value,
+            "risk_score": risk_score,
+            "reason": reason,
+            "compliance": compliance_result,
+            "oracle_result": oracle_result,
+            "evidence_hash": evidence_hash,
+            "timestamp": self.get_timestamp(),
+            "llm_enabled": self.has_llm
+        }

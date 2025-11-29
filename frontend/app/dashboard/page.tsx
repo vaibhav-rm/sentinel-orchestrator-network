@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/Button";
@@ -8,6 +8,10 @@ import { Card } from "@/components/ui/Card";
 import { MatrixTerminal } from "@/components/MatrixTerminal";
 import { RadarScan } from "@/components/RadarScan";
 import { AgentEconomy } from "@/components/AgentEconomy";
+import { ComplianceHUD } from "@/components/ComplianceHUD";
+import { HyperspaceTransition } from "@/components/HyperspaceTransition";
+import { HolographicCard } from "@/components/HolographicCard";
+import { ScrambleText } from "@/components/ScrambleText";
 import { Shield, Activity, Globe, Cpu, Wifi, Terminal } from "lucide-react";
 
 // Mock Data - Strictly following PROJECT_IDEA.md narrative
@@ -45,6 +49,25 @@ export default function Dashboard() {
     const [scanState, setScanState] = useState<"IDLE" | "SCANNING" | "VERDICT">("IDLE");
     const [verdict] = useState<"SAFE" | "DANGER">("DANGER"); // Default to Danger for demo
     const [logs, setLogs] = useState<LogEntry[]>([]);
+    const [paymentActive, setPaymentActive] = useState(false);
+    const [randomBytes, setRandomBytes] = useState<string[]>([]);
+
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setRandomBytes(Array.from({ length: 400 }).map(() =>
+            Math.floor(Math.random() * 255).toString(16).padStart(2, '0').toUpperCase()
+        ));
+    }, []);
+
+    useEffect(() => {
+        const lastLog = logs[logs.length - 1];
+        if (lastLog?.message.includes("HIRE_REQUEST")) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setPaymentActive(true);
+            const timer = setTimeout(() => setPaymentActive(false), 2000);
+            return () => clearTimeout(timer);
+        }
+    }, [logs]);
 
     const startScan = () => {
         setScanState("SCANNING");
@@ -64,15 +87,25 @@ export default function Dashboard() {
 
         // Redirect to verdict page
         setTimeout(() => {
-            router.push(`/verdict?status=${verdict}`);
+            setScanState("VERDICT");
+            setTimeout(() => {
+                router.push(`/verdict?status=${verdict}`);
+            }, 1500); // Wait for hyperspace effect
         }, delay + 1500);
     };
 
     return (
-        <main className="min-h-screen bg-obsidian-core text-ghost-white overflow-hidden relative selection:bg-neon-orchid/30 pt-24 pb-8 px-4 md:px-8">
+        <main className="min-h-screen text-ghost-white overflow-hidden relative selection:bg-neon-orchid/30 pt-24 pb-8 px-4 md:px-8">
+            {/* Base Background Color */}
+            <div className="fixed inset-0 bg-obsidian-core -z-50" />
+
             {/* HUD Grid Background */}
             <div className="fixed inset-0 bg-[linear-gradient(rgba(0,245,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(0,245,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] -z-10" />
             <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,0,0,0)_0%,rgba(0,0,0,0.8)_100%)] -z-10" />
+            <div className="fixed inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay pointer-events-none z-0" />
+
+            {/* Subtle Solution BG Overlay for "Safe" vibes (always present but subtle) */}
+            <div className="fixed inset-0 bg-[url('/solution-bg.png')] bg-cover bg-center opacity-[0.05] mix-blend-screen pointer-events-none -z-5" />
 
             {/* Dashboard Grid */}
             <div className="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-8rem)]">
@@ -80,7 +113,7 @@ export default function Dashboard() {
                 {/* Left Column: Controls & Input */}
                 <div className="lg:col-span-4 flex flex-col gap-6">
                     {/* Header Card */}
-                    <Card className="p-6 bg-black/40 border-white/10 backdrop-blur-xl relative overflow-hidden group">
+                    <HolographicCard className="p-6 bg-black/40 border-white/10 backdrop-blur-xl relative overflow-hidden group rounded-xl">
                         <TechCorner className="absolute top-2 left-2 text-neon-orchid/50" />
                         <TechCorner className="absolute top-2 right-2 rotate-90 text-neon-orchid/50" />
                         <TechCorner className="absolute bottom-2 right-2 rotate-180 text-neon-orchid/50" />
@@ -90,11 +123,13 @@ export default function Dashboard() {
                         <div className="relative z-10">
                             <div className="flex items-center gap-3 mb-2">
                                 <Shield className="w-6 h-6 text-neon-orchid" />
-                                <h2 className="font-orbitron font-bold text-xl tracking-wider">SENTINEL CONTROL</h2>
+                                <h2 className="font-orbitron font-bold text-xl tracking-wider">
+                                    <ScrambleText text="SENTINEL CONTROL" />
+                                </h2>
                             </div>
                             <p className="text-xs text-white/50 font-mono">SYSTEM READY // WAITING FOR INPUT</p>
                         </div>
-                    </Card>
+                    </HolographicCard>
 
                     {/* Input Area */}
                     <Card className="flex-1 p-6 bg-black/40 border-white/10 backdrop-blur-xl flex flex-col gap-4 relative">
@@ -105,13 +140,59 @@ export default function Dashboard() {
                                 CBOR
                             </span>
                         </div>
-                        <div className="relative flex-1 group">
+                        <div className="relative flex-1 group overflow-hidden rounded-lg">
+                            {/* Living Input Background */}
+                            <div className="absolute inset-0 opacity-10 pointer-events-none font-mono text-[10px] leading-3 text-neon-orchid overflow-hidden select-none">
+                                {randomBytes.map((byte, i) => (
+                                    <span key={i} className="inline-block w-4 text-center">
+                                        {byte}
+                                    </span>
+                                ))}
+                            </div>
+
                             <textarea
-                                className="w-full h-full bg-black/50 border border-white/10 rounded-lg p-4 font-mono text-sm text-white/80 focus:outline-none focus:border-neon-orchid/50 transition-colors resize-none custom-scrollbar"
+                                className="w-full h-full bg-black/50 border border-white/10 rounded-lg p-4 font-mono text-sm text-white/80 focus:outline-none focus:border-neon-orchid/50 transition-colors resize-none custom-scrollbar relative z-10 backdrop-blur-sm"
                                 placeholder="Paste raw transaction CBOR here..."
                                 disabled={scanState !== "IDLE"}
+                                onChange={() => {
+                                    // Trigger simple visual feedback
+                                }}
                             />
-                            <div className="absolute inset-0 border border-neon-orchid/0 group-hover:border-neon-orchid/20 pointer-events-none rounded-lg transition-colors" />
+
+                            {/* Analysis Overlay */}
+                            <AnimatePresence>
+                                {scanState === "SCANNING" && (
+                                    <motion.div
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        className="absolute inset-0 bg-black/80 backdrop-blur-md z-20 flex flex-col items-center justify-center font-mono"
+                                    >
+                                        <div className="text-neon-orchid text-xs tracking-widest mb-2 animate-pulse">DECODING PAYLOAD</div>
+                                        <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden">
+                                            <motion.div
+                                                className="h-full bg-neon-orchid"
+                                                animate={{ width: ["0%", "100%"] }}
+                                                transition={{ duration: 1.5, repeat: Infinity }}
+                                            />
+                                        </div>
+                                        <div className="mt-2 text-[10px] text-white/50">
+                                            {["PARSING_OPCODES", "CHECKING_SIGS", "VALIDATING_UTXO"].map((text, i) => (
+                                                <motion.div
+                                                    key={text}
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ delay: i * 0.5, duration: 0.5, repeat: Infinity, repeatDelay: 2 }}
+                                                >
+                                                    {text}...
+                                                </motion.div>
+                                            ))}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            <div className="absolute inset-0 border border-neon-orchid/0 group-hover:border-neon-orchid/20 pointer-events-none rounded-lg transition-colors z-30" />
                         </div>
 
                         <Button
@@ -157,10 +238,16 @@ export default function Dashboard() {
                     <Card className="flex-1 bg-black/60 border-white/10 backdrop-blur-xl relative overflow-hidden p-1">
                         <TechCorner className="absolute top-2 left-2 text-white/20" />
                         <TechCorner className="absolute top-2 right-2 rotate-90 text-white/20" />
-                        <TechCorner className="absolute bottom-2 right-2 rotate-180 text-white/20" />
                         <TechCorner className="absolute bottom-2 left-2 -rotate-90 text-white/20" />
 
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,245,255,0.05)_0%,transparent_70%)]" />
+
+                        {/* Process BG for Scanning State */}
+                        <motion.div
+                            className="absolute inset-0 bg-[url('/process-bg.png')] bg-cover bg-center opacity-0 mix-blend-screen"
+                            animate={{ opacity: scanState === "SCANNING" ? 0.1 : 0 }}
+                            transition={{ duration: 1 }}
+                        />
 
                         <div className="relative h-full rounded-xl overflow-hidden bg-black/40">
                             <AnimatePresence mode="wait">
@@ -173,7 +260,7 @@ export default function Dashboard() {
                                         className="h-full flex flex-col items-center justify-center"
                                     >
                                         <RadarScan />
-                                        <p className="mt-8 text-xs font-mono text-white/30 tracking-[0.2em] animate-pulse">SCANNING FOR THREATS</p>
+                                        <p className="mt-8 text-xs font-mono text-white/30 tracking-[0.2em] animate-pulse absolute bottom-8">SCANNING FOR THREATS</p>
                                     </motion.div>
                                 ) : (
                                     <motion.div
@@ -181,9 +268,18 @@ export default function Dashboard() {
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
                                         exit={{ opacity: 0 }}
-                                        className="h-full"
+                                        className="h-full flex flex-col relative"
                                     >
-                                        <MatrixTerminal logs={logs} isActive={true} />
+                                        {/* Threat BG Overlay */}
+                                        <div className="absolute inset-0 bg-[url('/threat-bg.png')] bg-cover bg-center opacity-10 mix-blend-overlay pointer-events-none" />
+
+                                        {/* Split View: Terminal + Compliance HUD */}
+                                        <div className="h-1/2 border-b border-white/10 relative z-10">
+                                            <MatrixTerminal logs={logs} isActive={true} />
+                                        </div>
+                                        <div className="h-1/2 relative z-10">
+                                            <ComplianceHUD isActive={true} />
+                                        </div>
                                     </motion.div>
                                 )}
                             </AnimatePresence>
@@ -200,7 +296,12 @@ export default function Dashboard() {
                             AGENT SWARM
                         </h3>
                         <div className="flex-1 flex items-center justify-center">
-                            <AgentEconomy />
+                            <AgentEconomy
+                                activeAgent={
+                                    logs.length > 0 ? logs[logs.length - 1].agent : null
+                                }
+                                paymentActive={paymentActive}
+                            />
                         </div>
                         <div className="mt-6 space-y-3">
                             {[
@@ -219,7 +320,7 @@ export default function Dashboard() {
             </div>
 
             {/* Overlays */}
-            {/* Verdict is now handled on a separate page */}
+            <HyperspaceTransition isActive={scanState === "VERDICT"} />
         </main>
     );
 }

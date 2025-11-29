@@ -1,0 +1,49 @@
+User input (Frontend)
+
+User pastes a transaction CBOR or a Policy ID into the Governance-Guard dashboard (or dApp integrates SON as a middleware).
+
+That input triggers an API call to your backend (hosted by Kodosumi), targeting the “Sentinel” agent.
+
+Sentinel Agent (in Kodosumi)
+
+Sentinel parses the transaction CBOR; checks “protocol compliance” (validity interval, required fields, correct contract parameters, correct protocol version).
+
+If transaction fails compliance — immediately verdict "unsafe" → block.
+
+If compliance passes but network-state check is needed — Sentinel triggers a HIRE_REQUEST message to Oracle agent (with escrow payment via Masumi).
+
+Payment & Agent-Economy Interaction (Masumi + internal protocol)
+
+Using Masumi, Sentinel’s wallet transfers payment (e.g. 1 ADA) to Oracle’s wallet, locked in escrow until job completion.
+
+The message (HIRE_REQUEST) is cryptographically signed (via each agent’s DID keypair) and sent over message bus / internal protocol.
+
+Oracle Agent (in Kodosumi)
+
+Oracle receives request; queries multiple nodes / blockchain endpoint(s) to check current consensus / chain tip / network health / fork status.
+
+Compares user-node’s block height vs known main chain tip; detects if user node belongs to minority / ghost fork or if consensus divergence exists.
+
+Prepares result — status “MINORITY_FORK_DETECTED” or “OK”, attaches evidence (node-divergence info, block height diff, maybe Merkle proof or header metadata). Signs result message.
+
+Return to Sentinel → Decision
+
+Sentinel receives signed report; verifies signature; decides: if fork detected → verdict “DANGER_REPLAY_ATTACK” (or similar); else “SAFE”.
+
+Optionally triggers Notary to generate a Proof / Capsule.
+
+Notary / Privacy Layer (Midnight)
+
+Notary produces a Zero-Knowledge Proof (ZKP) that “network consensus check was performed and chain state is healthy/unsafe,” without leaking private info (node IP, user identity, internal network config).
+
+That proof becomes a “ThreatProof Capsule” — metadata that can be stored, logged, audited, or handed to user / dApp / regulators — but doesn’t reveal sensitive info.
+
+Finalization / Settlement (Hydra)
+
+Verdict (SAFE / DANGER) + proof + payment settlement is submitted via Hydra state-channel / fast-settlement infrastructure.
+
+If verdict is DANGER: sign-button in frontend is disabled / transaction blocked. If SAFE: user allowed to proceed.
+
+Logging & Accountability
+
+All critical events (requests, payments, verdicts, proofs) are logged — either on-chain or in decentralized logs (via Masumi registry) — so everything is traceable, auditable, but privacy-preserving.

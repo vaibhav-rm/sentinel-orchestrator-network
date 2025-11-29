@@ -2,8 +2,9 @@
 
 import React, { useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { Card } from "@/components/ui/Card";
 import { AgentEconomy } from "@/components/AgentEconomy";
+import { ScrambleText } from "@/components/ScrambleText";
+import { HolographicCard } from "@/components/HolographicCard";
 import { Shield, AlertTriangle, CheckCircle, Zap, Search, Lock } from "lucide-react";
 
 // Tech Decoration Component
@@ -24,10 +25,16 @@ export default function AboutPage() {
     const scaleHero = useTransform(scrollYProgress, [0, 0.2], [1, 0.9]);
 
     return (
-        <main ref={containerRef} className="min-h-[300vh] bg-obsidian-core text-ghost-white overflow-x-hidden relative selection:bg-neon-orchid/30">
+        <main ref={containerRef} className="min-h-[300vh] text-ghost-white overflow-x-hidden relative selection:bg-neon-orchid/30">
+            {/* Base Background Color */}
+            <div className="fixed inset-0 bg-obsidian-core -z-50" />
+
             {/* Fixed Background */}
             <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,#1E2738_0%,#0A0E1A_100%)] -z-20" />
             <div className="fixed inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:60px_60px] -z-10 [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_80%)]" />
+            <div className="fixed inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay pointer-events-none z-0" />
+            {/* Fallback Background for depth */}
+            <div className="fixed inset-0 bg-[url('/solution-bg.png')] bg-cover bg-center opacity-[0.05] mix-blend-screen pointer-events-none -z-5" />
 
             {/* Hero Section */}
             <section className="h-screen flex flex-col items-center justify-center px-4 sticky top-0">
@@ -51,8 +58,10 @@ export default function AboutPage() {
                         transition={{ duration: 1, delay: 0.2 }}
                         className="text-6xl md:text-8xl font-orbitron font-black leading-tight tracking-tighter"
                     >
-                        THE <span className="text-transparent bg-clip-text bg-gradient-to-r from-neon-orchid to-electric-cyan">INVISIBLE</span><br />
-                        GUARDIAN
+                        THE <span className="text-transparent bg-clip-text bg-gradient-to-r from-neon-orchid to-electric-cyan">
+                            <ScrambleText text="INVISIBLE" delay={500} />
+                        </span><br />
+                        <ScrambleText text="GUARDIAN" delay={1000} />
                     </motion.h1>
 
                     <motion.p
@@ -102,7 +111,7 @@ export default function AboutPage() {
                         whileInView={{ opacity: 1, scale: 1 }}
                         viewport={{ once: true, margin: "-20%" }}
                     >
-                        <Card className="p-8 bg-black/60 border-white/10 backdrop-blur-xl relative overflow-hidden group">
+                        <HolographicCard className="p-8 bg-black/60 border-white/10 backdrop-blur-xl relative overflow-hidden group rounded-3xl">
                             <TechCorner className="absolute top-4 left-4 text-amber-warning/50" />
                             <TechCorner className="absolute top-4 right-4 rotate-90 text-amber-warning/50" />
                             <TechCorner className="absolute bottom-4 right-4 rotate-180 text-amber-warning/50" />
@@ -110,21 +119,38 @@ export default function AboutPage() {
 
                             <div className="absolute inset-0 bg-gradient-to-br from-amber-warning/5 to-transparent opacity-50" />
                             <div className="relative z-10 flex flex-col items-center gap-4 text-center">
-                                <div className="w-full h-48 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center relative overflow-hidden">
+                                <div className="w-full h-48 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center relative overflow-hidden group-hover:border-amber-warning/30 transition-colors">
                                     <div className="absolute inset-0 flex items-center justify-center gap-8 opacity-50">
-                                        <div className="w-1 h-32 bg-white/20" />
-                                        <div className="w-1 h-32 bg-white/20 rotate-12 origin-bottom" />
+                                        <motion.div
+                                            className="w-1 h-32 bg-white/20"
+                                            animate={{ height: ["0%", "100%", "0%"] }}
+                                            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                                        />
+                                        <motion.div
+                                            className="w-1 h-32 bg-white/20 rotate-12 origin-bottom"
+                                            animate={{ rotate: [12, 15, 12] }}
+                                            transition={{ duration: 0.2, repeat: Infinity, repeatDelay: 3 }}
+                                        />
                                     </div>
-                                    <span className="font-mono text-amber-warning bg-black/50 px-3 py-1 rounded border border-amber-warning/30 animate-pulse">FORK DETECTED</span>
+                                    <div className="relative z-10">
+                                        <span className="font-mono text-amber-warning bg-black/50 px-3 py-1 rounded border border-amber-warning/30 animate-pulse block mb-2">FORK DETECTED</span>
+                                        <div className="text-[10px] font-mono text-amber-warning/70">DIVERGENCE: -30 BLOCKS</div>
+                                    </div>
+
+                                    {/* Glitch Overlay */}
+                                    <div className="absolute inset-0 bg-amber-warning/10 mix-blend-overlay opacity-0 group-hover:opacity-100 animate-pulse" />
                                 </div>
                                 <p className="text-sm text-white/50 font-mono">Simulated Chain Split Scenario</p>
                             </div>
-                        </Card>
+                        </HolographicCard>
                     </motion.div>
                 </section>
 
                 {/* Section 2: The Swarm */}
-                <section className="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                <section className="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-12 items-center relative">
+                    {/* Background Circuit for this section */}
+                    <div className="absolute inset-0 bg-[url('/protocol-circuit.png')] bg-contain bg-no-repeat bg-right opacity-10 mix-blend-screen pointer-events-none" />
+
                     <motion.div
                         initial={{ opacity: 0, scale: 0.8 }}
                         whileInView={{ opacity: 1, scale: 1 }}
@@ -168,7 +194,7 @@ export default function AboutPage() {
                 </section>
 
                 {/* Section 3: The Workflow */}
-                <section className="max-w-4xl mx-auto px-4 text-center space-y-16">
+                <section className="max-w-5xl mx-auto px-4 text-center space-y-16">
                     <motion.div
                         initial={{ opacity: 0, y: 30 }}
                         whileInView={{ opacity: 1, y: 0 }}
@@ -191,7 +217,7 @@ export default function AboutPage() {
                                 viewport={{ once: true, margin: "-20%" }}
                                 transition={{ delay: idx * 0.2 }}
                             >
-                                <Card className="p-8 h-full bg-white/5 border-white/10 hover:bg-white/10 transition-colors group relative overflow-hidden">
+                                <HolographicCard className="p-8 h-full bg-white/5 border-white/10 hover:bg-white/10 transition-colors group relative overflow-hidden rounded-3xl">
                                     <TechCorner className="absolute top-2 left-2 text-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                                     <TechCorner className="absolute bottom-2 right-2 rotate-180 text-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
 
@@ -200,7 +226,7 @@ export default function AboutPage() {
                                     </div>
                                     <h3 className="text-xl font-bold font-orbitron mb-4">{step.title}</h3>
                                     <p className="text-white/60 leading-relaxed">{step.desc}</p>
-                                </Card>
+                                </HolographicCard>
                             </motion.div>
                         ))}
                     </div>
