@@ -24,15 +24,10 @@ message_bus = MessageBus()
 
 # Initialize Agents
 sentinel = SentinelAgent(enable_llm=True)
-oracle = OracleAgent(
-    blockfrost_project_id=None,  # Set from env if available
-    network="preprod",
-    enable_llm=True
-)
+oracle = OracleAgent(enable_llm=True)
 
 # Connect agents to each other
 sentinel.set_oracle(oracle)
-oracle.set_sentinel_public_key(sentinel.get_public_key_b64())
 
 # Register agents with MessageBus
 message_bus.register_agent("did:masumi:sentinel_01", sentinel.get_public_key_b64())
@@ -196,7 +191,7 @@ async def agents_info():
             "role": "verifier",
             "public_key": oracle.get_public_key_b64()[:20] + "...",
             "status": "active",
-            "network": oracle.network
+            "specialists": list(oracle.specialists.keys())
         }
     }
 

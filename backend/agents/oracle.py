@@ -1,317 +1,444 @@
-from nacl.signing import VerifyKey
-from nacl.exceptions import BadSignatureError
-from message_bus import MessageBus  # MEMBER1 builds this
-import websockets
-from fastapi import WebSocket
+"""
+=============================================================================
+Sentinel Orchestrator Network (SON) - AGENT B: Oracle Agent
+=============================================================================
+
+Role: Blockchain verifier, fork detection, network consensus checker
+Masumi Pricing: Per hire (via Sentinel escrow)
+
+Based on simplified_agent_flow.txt:
+1. Receives HIRE_REQUEST from Sentinel with escrow payment
+2. Coordinates 5 specialist mini-agents for comprehensive analysis:
+   - BlockScanner: Block height comparison, fork detection
+   - StakeAnalyzer: Stake pool analysis, minority control
+   - VoteDoctor: Governance vote analysis
+   - MempoolSniffer: Mempool transaction analysis  
+   - ReplayDetector: Transaction replay detection
+3. Aggregates results using Bayesian fusion
+4. Returns signed verdict to Sentinel
+
+=============================================================================
+"""
+
+import asyncio
+import base64
+import json
+from typing import Any, Dict, Optional, List
+from dataclasses import dataclass
+
+import nacl.signing
+from nacl.signing import SigningKey
+
+from .base import BaseAgent, Vote, Severity
+from .specialists import (
+    BlockScanner,
+    StakeAnalyzer,
+    VoteDoctor,
+    MempoolSniffer,
+    ReplayDetector,
+)
+
 
 # =============================================================================
-# BASE AGENT CLASS - Autonomous Microservice Template
+# ORACLE AGENT CLASS
 # =============================================================================
 
-class BaseAgent:
-    """Template for all autonomous agents - inherits DID, payments, APIs"""
+@dataclass
+class AggregatedResult:
+    """Aggregated result from all specialists."""
+    overall_risk: float  # 0.0 - 1.0
+    severity: Severity
+    vote: Vote
+    findings: List[str]
+    specialist_results: Dict[str, Any]
+    confidence: float  # 0.0 - 1.0
 
-    def __init__(self, agent_name, cost_ada=0.2):
-        self.name = agent_name
-        self.cost = cost_ada
-        self.did = f"did:key:{self.generate_key()}"  # Real DID
-        self.blockfrost = self.init_blockfrost()  # Free API
-        self.wallet_balance = 0.0
-        self.explanation = ""
 
-    def generate_key(self):
-        """Generate DID key (simplified)"""
-        key = nacl.signing.SigningKey.generate()
-        return base64.b64encode(key.verify_key.encode()).decode()
-
-    def init_blockfrost(self):
-        """Initialize Blockfrost API client"""
-        from blockfrost import BlockFrostApi, ApiUrls
-        # Using pre-production network with fresh API key
-        return BlockFrostApi(
-            project_id="preprod99ILsNJwp7AtN1sGgf9f7g7BrFDnCPrg",
-            base_url=ApiUrls.preprod.value
-        )
-
-    async def verify_payment(self, escrow_tx):
-        """ZERO TRUST - Check escrow includes our DID + cost"""
-        # In production: verify Cardano transaction
-        return escrow_tx.get("amount", 0) >= self.cost
-
-    async def work(self, chain_state):
-        """Agent-specific logic - override in subclasses"""
-        raise NotImplementedError
-
-# =============================================================================
-# SPECIALIST AGENTS - Real Cardano APIs, No Datasets
-# =============================================================================
-
-class BlockScanner(BaseAgent):
-    """Block height comparison - detects forks"""
-
-    async def work(self, chain_state):
-        try:
-            latest_block = await asyncio.get_event_loop().run_in_executor(
-                None, self.blockfrost.block_latest
-            )
-
-            # Handle Blockfrost response (could be dict or object)
-            if isinstance(latest_block, dict):
-                mainnet_tip = latest_block.get("height")
-            else:
-                mainnet_tip = getattr(latest_block, 'height', 0)
-
-            user_tip = chain_state["user_tip"]
-            delta = abs(int(mainnet_tip) - int(user_tip))
-            self.explanation = f"Block tip difference: {delta} blocks"
-            risk_score = 0.9 if delta > 5 else 0.1
-            return {"risk": risk_score, "evidence": self.explanation}
-        except Exception as e:
-            return {"risk": 0.5, "evidence": f"Blockfrost error: {str(e)}"}
-
-class StakeAnalyzer(BaseAgent):
-    """Stake pool analysis - detects minority control"""
-
-    async def work(self, chain_state):
-        try:
-            pools = await asyncio.get_event_loop().run_in_executor(
-                None, self.blockfrost.pools
-            )
-            # Calculate minority stake (top 10 pools)
-            total_stake = sum(float(p.get("active_stake", "0")) for p in pools[:10])
-            minority_ratio = min(total_stake / 1000000000, 1.0)  # Normalize
-            self.explanation = f"Top 10 pools control {minority_ratio:.1%} of stake"
-            risk_score = 0.8 if minority_ratio > 0.3 else 0.2
-            return {"risk": risk_score, "evidence": self.explanation}
-        except Exception as e:
-            return {"risk": 0.5, "evidence": f"Stake analysis error: {str(e)}"}
-
-class VoteDoctor(BaseAgent):
-    """Governance vote analysis - detects manipulation"""
-
-    async def work(self, chain_state):
-        try:
-            # Get recent governance actions
-            gov_actions = await asyncio.get_event_loop().run_in_executor(
-                None, self.blockfrost.governance_actions
-            )
-            # Simple divergence check (placeholder logic)
-            vote_count = len(gov_actions) if gov_actions else 0
-            divergence = min(vote_count / 100, 1.0)  # Normalize
-            self.explanation = f"Governance actions: {vote_count}"
-            risk_score = 0.7 if divergence > 0.4 else 0.1
-            return {"risk": risk_score, "evidence": self.explanation}
-        except Exception as e:
-            return {"risk": 0.5, "evidence": f"Governance analysis error: {str(e)}"}
-
-class MempoolSniffer(BaseAgent):
-    """Mempool transaction analysis - detects spam attacks"""
-
-    async def work(self, chain_state):
-        try:
-            # Simplified mempool check via Blockfrost (limited API)
-            recent_txs = await asyncio.get_event_loop().run_in_executor(
-                None, lambda: self.blockfrost.blocks_latest_transactions(limit=100)
-            )
-            tx_count = len(recent_txs) if recent_txs else 0
-            spam_ratio = min(tx_count / 1000, 1.0)  # Normalize
-            self.explanation = f"Mempool transactions: {tx_count}"
-            risk_score = 0.6 if spam_ratio > 0.2 else 0.05
-            return {"risk": risk_score, "evidence": self.explanation}
-        except Exception as e:
-            return {"risk": 0.5, "evidence": f"Mempool analysis error: {str(e)}"}
-
-class ReplayDetector(BaseAgent):
-    """Transaction replay detection"""
-
-    async def work(self, chain_state):
-        try:
-            # Check for duplicate transactions (simplified)
-            recent_txs = await asyncio.get_event_loop().run_in_executor(
-                None, lambda: self.blockfrost.blocks_latest_transactions(limit=50)
-            )
-            # Check for nonce reuse (placeholder)
-            replayed = 0  # In real implementation, check tx signatures
-            self.explanation = f"Potential replays detected: {replayed}"
-            risk_score = 0.95 if replayed > 0 else 0.0
-            return {"risk": risk_score, "evidence": self.explanation}
-        except Exception as e:
-            return {"risk": 0.5, "evidence": f"Replay detection error: {str(e)}"}
-
-# =============================================================================
-# ORACLE COORDINATOR - Hires Swarm + Bayesian Fusion
-# =============================================================================
-
-class OracleCoordinator(BaseAgent):
-    """Coordinates specialist agents using Matrix/escrow"""
-
-    def __init__(self):
-        super().__init__("oracle_coordinator", cost_ada=1.0)
+class OracleAgent(BaseAgent):
+    """
+    Agent B: Blockchain verifier and network consensus checker.
+    
+    Coordinates 5 specialist mini-agents:
+    1. BlockScanner - Block height comparison, fork detection
+    2. StakeAnalyzer - Stake pool analysis, minority control detection
+    3. VoteDoctor - Governance vote analysis
+    4. MempoolSniffer - Mempool transaction analysis
+    5. ReplayDetector - Transaction replay detection
+    
+    Uses Bayesian fusion to aggregate specialist results into a
+    unified risk assessment.
+    
+    Performance: Should complete within 5 seconds (parallel specialist execution)
+    """
+    
+    # Weight factors for Bayesian fusion (sum = 1.0)
+    SPECIALIST_WEIGHTS = {
+        "BlockScanner": 0.25,     # Fork detection is critical
+        "StakeAnalyzer": 0.20,   # Stake concentration affects security
+        "VoteDoctor": 0.15,      # Governance attacks are important
+        "MempoolSniffer": 0.20,  # Mempool analysis for front-running
+        "ReplayDetector": 0.20, # Replay attacks are severe
+    }
+    
+    def __init__(self, enable_llm: bool = True):
+        """
+        Initialize the Oracle Agent with all specialist agents.
+        
+        Args:
+            enable_llm: Whether to enable LLM-enhanced analysis
+        """
+        super().__init__(agent_name="oracle", role="verifier", enable_llm=enable_llm)
+        
+        # Generate cryptographic keypair for message signing
+        self.private_key = SigningKey.generate()
+        self.public_key = self.private_key.verify_key
+        
+        # Initialize specialist agents
         self.specialists = {
-            "block_scanner": BlockScanner("block_scanner", 0.15),
-            "stake_analyzer": StakeAnalyzer("stake_analyzer", 0.15),
-            "vote_doctor": VoteDoctor("vote_doctor", 0.15),
-            "mempool_sniffer": MempoolSniffer("mempool_sniffer", 0.15),
-            "replay_detector": ReplayDetector("replay_detector", 0.15),
+            "BlockScanner": BlockScanner(),
+            "StakeAnalyzer": StakeAnalyzer(),
+            "VoteDoctor": VoteDoctor(),
+            "MempoolSniffer": MempoolSniffer(),
+            "ReplayDetector": ReplayDetector(),
         }
-
-    async def execute_fork_check(self, sentinel_request):
-        """Main entry point - hires swarm and fuses results"""
-        chain_state = sentinel_request["payload"]
-
-        print(f"🤖 Oracle hiring swarm for fork check...")
-
-        # 1. Hire all specialists concurrently
-        tasks = []
-        for name, agent in self.specialists.items():
-            task = self.hire_specialist(name, agent, chain_state)
-            tasks.append(task)
-
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        # 2. Filter successful results
-        valid_results = [r for r in results if isinstance(r, dict)]
-
-        # 3. Bayesian fusion (simple weighted average)
-        if valid_results:
-            total_risk = sum(r["risk"] for r in valid_results)
-            avg_risk = total_risk / len(valid_results)
-            evidence = [r["evidence"] for r in valid_results]
-        else:
-            avg_risk = 0.5
-            evidence = ["All specialists failed"]
-
-        # 4. Determine final status
-        fork_confirmed = avg_risk > 0.7
-        status = "MINORITY_FORK_DETECTED" if fork_confirmed else "SAFE_CHAIN"
-
-        print(f"🎯 Swarm consensus: {status} (risk: {avg_risk:.2f})")
-
-        return {
-            "status": status,
-            "ai_fork_confirmed": fork_confirmed,
-            "risk_score": avg_risk,
-            "evidence": evidence,
-            "specialists_hired": len(valid_results),
-            "specialists_total": len(self.specialists)
-        }
-
-    async def hire_specialist(self, name, agent, chain_state):
-        """Simulate hiring a specialist (WebSocket in production)"""
-        try:
-            print(f"📡 Hiring {name}...")
-            result = await agent.work(chain_state)
-            print(f"✅ {name} completed: risk {result['risk']:.2f}")
-            return result
-        except Exception as e:
-            print(f"❌ {name} failed: {str(e)}")
-            return {"risk": 0.5, "evidence": f"Agent {name} error: {str(e)}"}
-
-    def bayes_fuse(self, risks):
-        """Simple Bayesian fusion (weighted average)"""
-        if not risks:
-            return 0.5
-        # Weight recent results higher
-        weights = [1.0] * len(risks)
-        weights[-1] *= 1.2  # Boost latest result
-        total_weight = sum(weights)
-        return sum(r * w for r, w in zip(risks, weights)) / total_weight
-
-# =============================================================================
-# LEGACY ORACLE AGENT - For Backward Compatibility
-# =============================================================================
-
-class OracleAgent:
-    """Legacy single-purpose Oracle Agent"""
-
-def __init__(self):
-self.private_key = nacl.signing.SigningKey.generate()
-self.public_key = self.private_key.verify_key
-        self.bus = MessageBus()  # Listens for your messages
-        self.bus = MessageBus()
-self.escrow_balance = 0.0
-        self.coordinator = OracleCoordinator()
-
-        # Load Sentinel's PUBLIC key (MEMBER1 shares this via config)
-        # For now, placeholder - will be fixed later
-        # Sentinel verification
-self.sentinel_public_bytes = base64.b64decode("SENTINEL_PUBLIC_BASE64_PLACEHOLDER")
-self.sentinel_verify_key = VerifyKey(self.sentinel_public_bytes)
-
-        # Blockfrost API setup
-        self.BLOCKFROST_URL = "https://cardano-mainnet.blockfrost.io/api/v0"
-        self.BLOCKFROST_PROJECT_ID = "preproduDheFnsnBxApBxdqkkpnoHLelIefGX7T"  # Get from blockfrost.io
-
-async def start(self):
-await self.bus.subscribe("did:masumi:oracle_01", self.handle_message)
-
-async def handle_message(self, envelope):
-        # 1. Verify signature
-if not self.verify_signature(envelope):
-return
-
-if envelope["type"] == "HIRE_REQUEST":
-            await self.execute_fork_check(envelope)
-
-    async def execute_fork_check(self, hire_request):
-        # 2. Accept payment (virtual)
-        escrow_id = hire_request["payload"]["escrow_id"]
-        self.escrow_balance += hire_request["payload"]["amount"]
-            result = await self.coordinator.execute_fork_check(envelope)
-            await self.send_job_complete(envelope, result)
-
-        # 3. Get real mainnet data
-        user_tip = hire_request["payload"]["user_tip"]
-        mainnet_tip = await self.fetch_mainnet_tip()
-
-        # 4. Fork logic
-        delta = abs(mainnet_tip - user_tip)
-        status = "MINORITY_FORK_DETECTED" if delta > 5 else "SAFE_CHAIN"
-
-        # 5. Reply
-    async def send_job_complete(self, original_request, result):
-reply = {
-"protocol": "IACP/2.0",
-"type": "JOB_COMPLETE",
-"from_did": "did:masumi:oracle_01",
-            "payload": {
-                "status": status,
-                "mainnet_tip": mainnet_tip,
-                "user_node_tip": user_tip,
-                "evidence": "block_divergence" if delta > 5 else "none"
+        
+        self.logger.info(f"Oracle Agent initialized with {len(self.specialists)} specialists")
+    
+    def get_public_key_b64(self) -> str:
+        """Get base64-encoded public key for verification."""
+        return base64.b64encode(bytes(self.public_key)).decode()
+    
+    # -------------------------------------------------------------------------
+    # MAIN PROCESSING METHOD  
+    # -------------------------------------------------------------------------
+    
+    async def process(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Main entry point - run all specialists and aggregate results.
+        
+        Args:
+            input_data: {
+                "policy_id": "<hex_string>",
+                "address": "<cardano_address>",
+                "user_tip": <block_height>,
+                "context": {}
             }
-            "payload": result
-}
-signed_reply = self.sign_envelope(reply)
-await self.bus.publish(signed_reply)
-
-    async def fetch_mainnet_tip(self):
-        # Blockfrost call (get free key from blockfrost.io)
-        headers = {"project_id": self.BLOCKFROST_PROJECT_ID}
-        resp = requests.get(f"{self.BLOCKFROST_URL}/blocks/latest", headers=headers)
-        resp.raise_for_status()
-        return resp.json()["height"]
-
-def verify_signature(self, envelope):
-if "signature" not in envelope:
-return False
-
-        # Reconstruct original message (exclude signature)
-message = {k: v for k, v in envelope.items() if k != "signature"}
-message_bytes = json.dumps(message, sort_keys=True, separators=(',', ':')).encode()
-
-signature_bytes = base64.b64decode(envelope["signature"])
-
-try:
-@@ -86,4 +276,10 @@ def verify_signature(self, envelope):
-return True
-except BadSignatureError:
-print("❌ Fake signature dropped")
-            return False
-            return False
-
-    def sign_envelope(self, envelope):
-        message_bytes = json.dumps(envelope, separators=(',', ':')).encode()
+            
+        Returns:
+            Dict with aggregated analysis results
+        """
+        policy_id = input_data.get("policy_id", "")
+        address = input_data.get("address", "")
+        user_tip = input_data.get("user_tip", 0)
+        context = input_data.get("context", {})
+        
+        # Use address if provided, else use policy_id
+        target = address if address else policy_id
+        
+        self.log_start(target[:16] if target else "unknown")
+        
+        # Run all specialists in parallel
+        aggregated = await self._run_specialists(target, context)
+        
+        self.log_complete(aggregated.vote, int(aggregated.overall_risk * 100))
+        
+        return self._build_result(
+            policy_id=policy_id,
+            address=address,
+            aggregated=aggregated
+        )
+    
+    # -------------------------------------------------------------------------
+    # HIRE REQUEST HANDLER (Called by Sentinel)
+    # -------------------------------------------------------------------------
+    
+    async def handle_hire_request(self, envelope: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle HIRE_REQUEST from Sentinel agent.
+        
+        Validates the request, runs specialist analysis, and returns
+        a signed response.
+        
+        Args:
+            envelope: Signed IACP/2.0 message envelope from Sentinel
+            
+        Returns:
+            Signed response envelope with analysis results
+        """
+        self.logger.info("Received HIRE_REQUEST from Sentinel")
+        
+        # Extract request details
+        payload = envelope.get("payload", {})
+        policy_id = payload.get("policy_id", "")
+        user_tip = payload.get("user_tip", 0)
+        escrow_id = payload.get("escrow_id", "")
+        job_type = payload.get("job_type", "fork_check")
+        
+        self.logger.info(f"Processing job: {job_type} for policy: {policy_id[:16]}...")
+        
+        # Determine target (address format vs policy_id)
+        target = policy_id
+        context = {
+            "user_tip": user_tip,
+            "job_type": job_type,
+            "escrow_id": escrow_id,
+        }
+        
+        # Run specialist analysis
+        aggregated = await self._run_specialists(target, context)
+        
+        # Determine Oracle status based on aggregated results
+        oracle_status = self._determine_oracle_status(aggregated)
+        
+        # Build response payload
+        response_payload = {
+            "status": oracle_status,
+            "mainnet_tip": user_tip,  # In production, fetch from node
+            "user_node_tip": user_tip,
+            "risk_score": aggregated.overall_risk,
+            "vote": aggregated.vote.value,
+            "severity": aggregated.severity.value,
+            "findings": aggregated.findings[:5],  # Top 5 findings
+            "specialist_summary": {
+                name: {
+                    "risk": result.get("risk_score", 0),
+                    "severity": result.get("severity", "info"),
+                }
+                for name, result in aggregated.specialist_results.items()
+            },
+            "confidence": aggregated.confidence,
+            "evidence": self.generate_hash(
+                f"{policy_id}|{oracle_status}|{aggregated.overall_risk}"
+            ),
+            "escrow_id": escrow_id,
+        }
+        
+        # Build and sign response envelope
+        response_envelope = {
+            "protocol": "IACP/2.0",
+            "type": "HIRE_RESPONSE",
+            "from_did": "did:masumi:oracle_01",
+            "to_did": envelope.get("from_did", "did:masumi:sentinel_01"),
+            "payload": response_payload,
+            "timestamp": self.get_timestamp(),
+        }
+        
+        signed_response = self._sign_envelope(response_envelope)
+        
+        self.logger.info(f"Returning HIRE_RESPONSE: {oracle_status}")
+        return signed_response
+    
+    # -------------------------------------------------------------------------
+    # SPECIALIST COORDINATION
+    # -------------------------------------------------------------------------
+    
+    async def _run_specialists(
+        self, 
+        target: str, 
+        context: Dict[str, Any]
+    ) -> AggregatedResult:
+        """
+        Run all specialist agents in parallel and aggregate results.
+        
+        Args:
+            target: Address or policy ID to analyze
+            context: Additional context for specialists
+            
+        Returns:
+            AggregatedResult with Bayesian-fused risk assessment
+        """
+        self.logger.info(f"Running {len(self.specialists)} specialists in parallel")
+        
+        # Create tasks for all specialists
+        tasks = {}
+        for name, specialist in self.specialists.items():
+            tasks[name] = specialist.scan(target, context)
+        
+        # Run all specialists concurrently
+        results = {}
+        try:
+            gathered = await asyncio.gather(*tasks.values(), return_exceptions=True)
+            
+            for name, result in zip(tasks.keys(), gathered):
+                if isinstance(result, Exception):
+                    self.logger.warning(f"{name} failed with: {result}")
+                    results[name] = {
+                        "risk_score": 0.1,
+                        "severity": "low",
+                        "findings": [f"Specialist error: {str(result)}"],
+                        "metadata": {"error": True},
+                        "success": False,
+                    }
+                else:
+                    results[name] = {
+                        "risk_score": result.risk_score,
+                        "severity": result.severity.value,
+                        "findings": result.findings,
+                        "metadata": result.metadata,
+                        "success": result.success,
+                    }
+                    self.logger.debug(f"{name}: risk={result.risk_score:.2f}, severity={result.severity.value}")
+                    
+        except Exception as e:
+            self.logger.error(f"Specialist execution error: {e}")
+        
+        # Aggregate using Bayesian fusion
+        return self._bayesian_fusion(results)
+    
+    def _bayesian_fusion(self, specialist_results: Dict[str, Any]) -> AggregatedResult:
+        """
+        Aggregate specialist results using weighted Bayesian fusion.
+        
+        The fusion formula:
+        - Overall risk = weighted sum of individual risks
+        - Confidence adjusted by successful specialist count
+        - Severity = max severity from all specialists
+        
+        Args:
+            specialist_results: Results from all specialists
+            
+        Returns:
+            AggregatedResult with fused risk assessment
+        """
+        weighted_risk = 0.0
+        total_weight = 0.0
+        max_severity = Severity.LOW
+        all_findings = []
+        successful_count = 0
+        
+        for name, result in specialist_results.items():
+            weight = self.SPECIALIST_WEIGHTS.get(name, 0.1)
+            risk = result.get("risk_score", 0.0)
+            
+            # Apply weight
+            weighted_risk += risk * weight
+            total_weight += weight
+            
+            # Track success
+            if result.get("success", True):
+                successful_count += 1
+            
+            # Collect findings
+            findings = result.get("findings", [])
+            for finding in findings:
+                all_findings.append(f"[{name}] {finding}")
+            
+            # Track max severity
+            severity_str = result.get("severity", "low")
+            try:
+                severity = Severity(severity_str)
+                if self._severity_rank(severity) > self._severity_rank(max_severity):
+                    max_severity = severity
+            except ValueError:
+                pass
+        
+        # Normalize risk
+        overall_risk = weighted_risk / total_weight if total_weight > 0 else 0.0
+        
+        # Calculate confidence based on specialist success rate
+        confidence = successful_count / len(specialist_results) if specialist_results else 0.0
+        
+        # Determine vote based on overall risk
+        if overall_risk >= 0.7:
+            vote = Vote.DANGER
+        elif overall_risk >= 0.4:
+            vote = Vote.WARNING
+        else:
+            vote = Vote.SAFE
+        
+        return AggregatedResult(
+            overall_risk=overall_risk,
+            severity=max_severity,
+            vote=vote,
+            findings=all_findings,
+            specialist_results=specialist_results,
+            confidence=confidence,
+        )
+    
+    def _severity_rank(self, severity: Severity) -> int:
+        """Get numeric rank for severity comparison."""
+        ranks = {
+            Severity.LOW: 1,
+            Severity.MEDIUM: 2,
+            Severity.HIGH: 3,
+            Severity.CRITICAL: 4,
+        }
+        return ranks.get(severity, 0)
+    
+    def _determine_oracle_status(self, aggregated: AggregatedResult) -> str:
+        """
+        Determine Oracle status string based on aggregated results.
+        
+        Status values:
+        - SAFE_CHAIN: No significant risks detected
+        - MINORITY_FORK_DETECTED: Fork or consensus issue detected
+        - NETWORK_RISK_DETECTED: General network-level risks
+        - GOVERNANCE_RISK_DETECTED: Governance-related risks
+        
+        Args:
+            aggregated: Aggregated specialist results
+            
+        Returns:
+            Status string for Sentinel
+        """
+        # Check specific findings for status determination
+        findings_text = " ".join(aggregated.findings).lower()
+        
+        if "fork" in findings_text or "chain continuity" in findings_text:
+            return "MINORITY_FORK_DETECTED"
+        
+        if "governance" in findings_text or "drep" in findings_text:
+            if aggregated.overall_risk >= 0.5:
+                return "GOVERNANCE_RISK_DETECTED"
+        
+        if aggregated.overall_risk >= 0.6:
+            return "NETWORK_RISK_DETECTED"
+        
+        if aggregated.overall_risk >= 0.3:
+            return "CAUTION_ADVISED"
+        
+        return "SAFE_CHAIN"
+    
+    # -------------------------------------------------------------------------
+    # CRYPTOGRAPHIC SIGNING
+    # -------------------------------------------------------------------------
+    
+    def _sign_envelope(self, envelope: Dict[str, Any]) -> Dict[str, Any]:
+        """Sign a message envelope using Ed25519."""
+        message_bytes = json.dumps(
+            envelope, sort_keys=True, separators=(',', ':')
+        ).encode()
+        
         signed = self.private_key.sign(message_bytes)
-        envelope["signature"] = base64.b64encode(signed.signature).decode()
-        return envelope
+        signature = base64.b64encode(signed.signature).decode()
+        
+        return {**envelope, "signature": signature}
+    
+    # -------------------------------------------------------------------------
+    # RESULT BUILDING
+    # -------------------------------------------------------------------------
+    
+    def _build_result(
+        self,
+        policy_id: str,
+        address: str,
+        aggregated: AggregatedResult
+    ) -> Dict[str, Any]:
+        """Build the final result dictionary."""
+        evidence_data = f"{policy_id}|{address}|{aggregated.vote.value}|{self.get_timestamp()}"
+        evidence_hash = self.generate_hash(evidence_data)
+        
+        return {
+            "agent": "oracle",
+            "policy_id": policy_id,
+            "address": address,
+            "vote": aggregated.vote.value,
+            "risk_score": aggregated.overall_risk,
+            "severity": aggregated.severity.value,
+            "confidence": aggregated.confidence,
+            "findings": aggregated.findings,
+            "specialist_results": aggregated.specialist_results,
+            "evidence_hash": evidence_hash,
+            "timestamp": self.get_timestamp(),
+            "llm_enabled": self.has_llm,
+        }

@@ -1,0 +1,188 @@
+version: '3.8'
+
+services:
+  # =========================================================================
+  # SPECIALIST AGENTS - Independent Microservices on KODOSUMI
+  # =========================================================================
+  # Each specialist runs as an independent service with its own:
+  # - Container/Pod
+  # - Environment variables
+  # - Port binding
+  # - Logging
+  # - DID and keypair
+  # =========================================================================
+  
+  block-scanner:
+    image: son/block-scanner:latest
+    container_name: block-scanner-01
+    ports:
+      - "8001:8000"
+    environment:
+      - SERVICE_NAME=BlockScanner
+      - SERVICE_DID=did:masumi:block_scanner_01
+      - BLOCKFROST_API_URL=https://cardano-preprod.blockfrost.io/api
+      - BLOCKFROST_API_KEY=${BLOCKFROST_API_KEY}
+      - KODOSUMI_REGISTRY_URL=http://kodosumi-registry:8080
+      - KODOSUMI_REGISTRY_PORT=8080
+      - LOG_LEVEL=INFO
+    networks:
+      - son-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    volumes:
+      - ./block_scanner.py:/app/main.py
+      - ./shared/:/app/shared/
+    labels:
+      agent.type: "specialist"
+      agent.role: "block_scanner"
+
+  stake-analyzer:
+    image: son/stake-analyzer:latest
+    container_name: stake-analyzer-01
+    ports:
+      - "8002:8000"
+    environment:
+      - SERVICE_NAME=StakeAnalyzer
+      - SERVICE_DID=did:masumi:stake_analyzer_01
+      - BLOCKFROST_API_URL=https://cardano-preprod.blockfrost.io/api
+      - BLOCKFROST_API_KEY=${BLOCKFROST_API_KEY}
+      - KODOSUMI_REGISTRY_URL=http://kodosumi-registry:8080
+      - KODOSUMI_REGISTRY_PORT=8080
+      - LOG_LEVEL=INFO
+    networks:
+      - son-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    volumes:
+      - ./stake_analyzer.py:/app/main.py
+      - ./shared/:/app/shared/
+    labels:
+      agent.type: "specialist"
+      agent.role: "stake_analyzer"
+
+  vote-doctor:
+    image: son/vote-doctor:latest
+    container_name: vote-doctor-01
+    ports:
+      - "8003:8000"
+    environment:
+      - SERVICE_NAME=VoteDoctor
+      - SERVICE_DID=did:masumi:vote_doctor_01
+      - BLOCKFROST_API_URL=https://cardano-preprod.blockfrost.io/api
+      - BLOCKFROST_API_KEY=${BLOCKFROST_API_KEY}
+      - KODOSUMI_REGISTRY_URL=http://kodosumi-registry:8080
+      - KODOSUMI_REGISTRY_PORT=8080
+      - LOG_LEVEL=INFO
+    networks:
+      - son-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    volumes:
+      - ./vote_doctor.py:/app/main.py
+      - ./shared/:/app/shared/
+    labels:
+      agent.type: "specialist"
+      agent.role: "vote_doctor"
+
+  mempool-sniffer:
+    image: son/mempool-sniffer:latest
+    container_name: mempool-sniffer-01
+    ports:
+      - "8004:8000"
+    environment:
+      - SERVICE_NAME=MempoolSniffer
+      - SERVICE_DID=did:masumi:mempool_sniffer_01
+      - BLOCKFROST_API_URL=https://cardano-preprod.blockfrost.io/api
+      - BLOCKFROST_API_KEY=${BLOCKFROST_API_KEY}
+      - KODOSUMI_REGISTRY_URL=http://kodosumi-registry:8080
+      - KODOSUMI_REGISTRY_PORT=8080
+      - LOG_LEVEL=INFO
+    networks:
+      - son-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    volumes:
+      - ./mempool_sniffer.py:/app/main.py
+      - ./shared/:/app/shared/
+    labels:
+      agent.type: "specialist"
+      agent.role: "mempool_sniffer"
+
+  replay-detector:
+    image: son/replay-detector:latest
+    container_name: replay-detector-01
+    ports:
+      - "8005:8000"
+    environment:
+      - SERVICE_NAME=ReplayDetector
+      - SERVICE_DID=did:masumi:replay_detector_01
+      - BLOCKFROST_API_URL=https://cardano-preprod.blockfrost.io/api
+      - BLOCKFROST_API_KEY=${BLOCKFROST_API_KEY}
+      - KODOSUMI_REGISTRY_URL=http://kodosumi-registry:8080
+      - KODOSUMI_REGISTRY_PORT=8080
+      - LOG_LEVEL=INFO
+    networks:
+      - son-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    volumes:
+      - ./replay_detector.py:/app/main.py
+      - ./shared/:/app/shared/
+    labels:
+      agent.type: "specialist"
+      agent.role: "replay_detector"
+
+  # =========================================================================
+  # KODOSUMI REGISTRY - For agent discovery and DID registration
+  # =========================================================================
+  
+  kodosumi-registry:
+    image: kodosumi/registry:latest
+    container_name: kodosumi-registry
+    ports:
+      - "8080:8080"
+    environment:
+      - REGISTRY_PORT=8080
+      - REGISTRY_LOG_LEVEL=INFO
+    networks:
+      - son-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  son-network:
+    driver: bridge
+    name: son-network
+
+volumes:
+  shared:
+    name: son-shared-data
