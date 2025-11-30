@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Shield, LayoutDashboard, Info, Home } from "lucide-react";
+import { Shield, LayoutDashboard, Info, Home, Landmark, Vote } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -59,6 +59,8 @@ export const Navbar = () => {
                     <NavItem href="/" label="Home" icon={Home} isActive={pathname === "/"} />
                     <NavItem href="/dashboard" label="Scanner" icon={LayoutDashboard} isActive={pathname === "/dashboard"} />
                     <NavItem href="/governance" label="Governance" icon={Shield} isActive={pathname === "/governance"} />
+                    <NavItem href="/treasury" label="Treasury" icon={Landmark} isActive={pathname === "/treasury"} />
+                    <NavItem href="/drep" label="DRep" icon={Vote} isActive={pathname === "/drep"} />
                     <NavItem href="/about" label="Protocol" icon={Info} isActive={pathname === "/about"} />
                 </div>
 
