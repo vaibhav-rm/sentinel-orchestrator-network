@@ -1,7 +1,6 @@
-# ⚙️ SON Backend
-
 <div align="center">
 
+# ⚙️ SON Backend
 
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.109-009688?style=for-the-badge&logo=fastapi&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)
