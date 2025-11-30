@@ -323,7 +323,7 @@ flowchart TB
 
 ```bash
 # Clone repository
-git clone https://github.com/your-org/sentinel-orchestrator-network.git
+git clone https://github.com/varunaditya27/sentinel-orchestrator-network.git
 cd sentinel-orchestrator-network
 
 # Navigate to backend
