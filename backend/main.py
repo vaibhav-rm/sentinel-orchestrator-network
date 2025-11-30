@@ -640,16 +640,42 @@ async def check_proposal(request: Dict[str, Any]):
     """Check a specific proposal for constitutional compliance"""
     try:
         proposal = request.get("proposal", {})
+        ipfs_hash = request.get("ipfs_hash")
+
+        # If IPFS hash provided, fetch metadata first
+        if ipfs_hash:
+            logger.info(f"Fetching proposal metadata for hash: {ipfs_hash}")
+            metadata = await proposal_fetcher.fetch_metadata(ipfs_hash)
+            
+            # Convert dataclass to dict for analysis
+            proposal = {
+                "id": ipfs_hash,
+                "title": metadata.title,
+                "abstract": metadata.abstract,
+                "motivation": metadata.motivation,
+                "rationale": metadata.rationale,
+                "amount": metadata.amount,
+                "references": metadata.references
+            }
         
         # Check policy compliance
-        policy_result = policy_analyzer.process([proposal])
+        policy_result = await policy_analyzer.analyze(proposal)
         
-        # Analyze sentiment
+        # Analyze sentiment (mocked for now as we don't have real on-chain voting data source in this context)
+        # In a real scenario, we'd query a db or indexer
         sentiment_result = sentiment_analyzer.process([proposal])
         
         return {
             "proposal_id": proposal.get("id"),
-            "policy_compliance": policy_result,
+            "policy_compliance": {
+                "summary": policy_result.summary,
+                "technical_summary": policy_result.technical_summary,
+                "flags": policy_result.flags,
+                "recommendation": policy_result.recommendation,
+                "reasoning": policy_result.reasoning,
+                "confidence": policy_result.confidence,
+                "complexity_score": policy_result.complexity_score
+            },
             "sentiment": sentiment_result,
             "timestamp": datetime.utcnow().isoformat() + "Z"
         }
