@@ -610,8 +610,20 @@ async def analyze_governance(request: Dict[str, Any], background_tasks: Backgrou
         # Analyze policy compliance
         policy_result = policy_analyzer.process(proposals)
         
-        # Analyze sentiment
-        sentiment_result = sentiment_analyzer.process(proposals)
+        # Analyze sentiment for each proposal
+        sentiment_results = []
+        for proposal in proposals:
+            proposal_id = proposal.get("id", "")
+            if proposal_id:
+                sentiment = await sentiment_analyzer.analyze(proposal_id)
+                sentiment_results.append({
+                    "proposal_id": proposal_id,
+                    "sentiment": sentiment.sentiment,
+                    "support_percentage": sentiment.support_percentage,
+                    "vote_breakdown": sentiment.vote_breakdown,
+                    "sample_size": sentiment.sample_size
+                })
+        sentiment_result = {"proposals": sentiment_results}
         
         # Orchestrate final analysis
         orchestration_result = drep_helper.process({
@@ -661,9 +673,15 @@ async def check_proposal(request: Dict[str, Any]):
         # Check policy compliance
         policy_result = await policy_analyzer.analyze(proposal)
         
-        # Analyze sentiment (mocked for now as we don't have real on-chain voting data source in this context)
-        # In a real scenario, we'd query a db or indexer
-        sentiment_result = sentiment_analyzer.process([proposal])
+        # Analyze sentiment using the proposal ID
+        proposal_id = proposal.get("id", "")
+        sentiment = await sentiment_analyzer.analyze(proposal_id)
+        sentiment_result = {
+            "sentiment": sentiment.sentiment,
+            "support_percentage": sentiment.support_percentage,
+            "vote_breakdown": sentiment.vote_breakdown,
+            "sample_size": sentiment.sample_size
+        }
         
         return {
             "proposal_id": proposal.get("id"),
