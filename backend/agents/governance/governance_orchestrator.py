@@ -169,6 +169,27 @@ class GovernanceOrchestrator:
             "auto_votable": False
         }
     
+    async def process(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Main processing method for BaseAgent compatibility.
+        Expects input_data with 'proposal_id' and optionally 'ipfs_hash'.
+        """
+        proposal_id = input_data.get("proposal_id", "")
+        ipfs_hash = input_data.get("ipfs_hash", "")
+
+        if not proposal_id:
+            return {
+                "error": "Missing proposal_id",
+                "status": "failed"
+            }
+
+        # For now, use a mock IPFS hash if not provided
+        if not ipfs_hash:
+            # Mock IPFS hash for demonstration
+            ipfs_hash = "QmXyz1234567890abcdef"
+
+        return await self.analyze_proposal(proposal_id, ipfs_hash)
+    
     async def _synthesize_analysis(
         self,
         metadata,

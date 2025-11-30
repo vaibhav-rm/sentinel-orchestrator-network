@@ -83,15 +83,15 @@ logger.info(f"✅ Specialist agents available: {list(specialist_agents.keys())}"
 # GOVERNANCE AGENTS
 # =============================================================================
 
-governance_orchestrator = GovernanceOrchestrator()
+drep_helper = GovernanceOrchestrator()
 proposal_fetcher = ProposalFetcher()
 policy_analyzer = PolicyAnalyzer()
 sentiment_analyzer = SentimentAnalyzer()
 treasury_guardian = TreasuryGuardian(enable_llm=True)
 
 # Register governance agents with MessageBus
-message_bus.register_agent("did:masumi:governance_orchestrator_01", 
-                          governance_orchestrator.get_public_key_b64() if hasattr(governance_orchestrator, 'get_public_key_b64') else "")
+message_bus.register_agent("did:masumi:drep_helper_01", 
+                          drep_helper.get_public_key_b64() if hasattr(drep_helper, 'get_public_key_b64') else "")
 logger.info("✅ Governance agents initialized: Orchestrator, ProposalFetcher, PolicyAnalyzer, SentimentAnalyzer")
 
 # =============================================================================
@@ -105,7 +105,7 @@ agent_registry = {
     },
     "specialists": specialist_agents,
     "governance": {
-        "governance_orchestrator": governance_orchestrator,
+        "drep_helper": drep_helper,
         "proposal_fetcher": proposal_fetcher,
         "policy_analyzer": policy_analyzer,
         "sentiment_analyzer": sentiment_analyzer,
@@ -408,7 +408,7 @@ async def agents_info():
             for name in specialist_agents.keys()
         },
         "governance_agents": {
-            "governance_orchestrator": {
+            "drep_helper": {
                 "role": "governance_coordinator",
                 "status": "active",
                 "description": "Coordinates governance analysis across all proposals"
@@ -461,7 +461,7 @@ async def agents_health():
         }
     
     # Governance agents
-    health_status["agents"]["governance_orchestrator"] = {
+    health_status["agents"]["drep_helper"] = {
         "status": "healthy",
         "type": "governance"
     }
@@ -494,7 +494,7 @@ async def agents_list():
             for name in specialist_agents.keys()
         },
         "governance_agents": {
-            "governance_orchestrator": "Governance Orchestrator - Coordinates governance analysis",
+            "drep_helper": "Governance Orchestrator - Coordinates governance analysis",
             "proposal_fetcher": "Proposal Fetcher - Retrieves proposals from IPFS",
             "policy_analyzer": "Policy Analyzer - Checks constitutional compliance",
             "sentiment_analyzer": "Sentiment Analyzer - Analyzes community sentiment"
@@ -564,7 +564,7 @@ async def governance_status():
     return {
         "status": "operational",
         "agents": {
-            "governance_orchestrator": {
+            "drep_helper": {
                 "status": "active",
                 "role": "coordinator",
                 "description": "Coordinates governance analysis"
@@ -622,7 +622,7 @@ async def analyze_governance(request: Dict[str, Any], background_tasks: Backgrou
         sentiment_result = sentiment_results[0] if sentiment_results else {}
         
         # Orchestrate final analysis
-        orchestration_result = governance_orchestrator.process({
+        orchestration_result = drep_helper.process({
             "proposals": proposals,
             "policy_analysis": policy_result,
             "sentiment_analysis": sentiment_result
